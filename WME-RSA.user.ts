@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME Road Shield Assistant
 // @namespace    https://greasyfork.org/en/users/286957-skidooguy
-// @version      2025.12.22.001
+// @version      2025.03.03.001
 // @description  Adds shield information display to WME
 // @author       SkiDooGuy, jm6087, Karlsosha
 // @match        https://www.waze.com/editor*
@@ -1224,12 +1224,30 @@ function rsaInit() {
         sdk.Events.on({ eventName: "wme-map-move-end", eventHandler: updateMap });
         sdk.Events.on({ eventName: "wme-map-zoom-changed", eventHandler: updateMap });
 
-        sdk.Shortcuts.createShortcut({
-            callback: addShieldClick,
-            description: "Activates the Add Shield Button",
-            shortcutId: "addShield",
-            shortcutKeys: "A+83",
-        });
+        try {
+            sdk.Shortcuts.createShortcut({
+                callback: addShieldClick,
+                description: "Activates the Add Shield Button",
+                shortcutId: "addShield",
+                shortcutKeys: "A+83",
+            });
+        } catch (e) {
+            if (e instanceof Error && e.message.includes("already in use")) {
+                console.warn("RSA: Shortcut key A+S was already in use, registering addShield without a key binding.");
+                try {
+                    sdk.Shortcuts.createShortcut({
+                        callback: addShieldClick,
+                        description: "Activates the Add Shield Button",
+                        shortcutId: "addShield",
+                        shortcutKeys: null,
+                    });
+                } catch (retryError) {
+                    console.error("RSA: Failed to register addShield shortcut even with null keys:", retryError);
+                }
+            } else {
+                console.error("RSA: Failed to register addShield shortcut:", e);
+            }
+        }
         // new WazeWrap.Interface.Shortcut('addShield',
         //                                 'Activates the Add Shield Button',
         //                                 'wmersa',
