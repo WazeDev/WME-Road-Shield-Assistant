@@ -2,7 +2,7 @@
 // ==UserScript==
 // @name         WME Road Shield Assistant
 // @namespace    https://greasyfork.org/en/users/286957-skidooguy
-// @version      2026.04.23.001
+// @version      2026.06.11.001
 // @description  Adds shield information display to WME
 // @author       SkiDooGuy, jm6087, Karlsosha
 // @match        https://www.waze.com/editor*
@@ -15,6 +15,7 @@
 // @grant        GM_xmlhttpRequest
 // @grant        unsafeWindow
 // @connect      greasyfork.org
+// @connect      docs.google.com
 // @contributionURL https://github.com/WazeDev/Thank-The-Authors
 // ==/UserScript==
 /* global W */
@@ -27,12 +28,22 @@
 // import WazeWrap from "https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js";
 let sdk;
 unsafeWindow.SDK_INITIALIZED.then(() => {
-    if (!unsafeWindow.getWmeSdk) {
-        throw new Error("SDK is not installed");
+    try {
+        console.log("RSA: SDK_INITIALIZED event fired");
+        if (!unsafeWindow.getWmeSdk) {
+            throw new Error("SDK is not installed");
+        }
+        sdk = unsafeWindow.getWmeSdk({ scriptId: "wme-road-shield-assistant", scriptName: "WME Road Shield Assistant" });
+        console.log(`SDK v ${sdk.getSDKVersion()} on ${sdk.getWMEVersion()} initialized`);
+        sdk.Events.once({ eventName: "wme-ready" }).then(rsaInit).catch((e) => {
+            console.error("RSA: Error in rsaInit promise chain", e);
+        });
     }
-    sdk = unsafeWindow.getWmeSdk({ scriptId: "wme-road-shield-assistant", scriptName: "WME Road Shield Assistant" });
-    console.log(`SDK v ${sdk.getSDKVersion()} on ${sdk.getWMEVersion()} initialized`);
-    sdk.Events.once({ eventName: "wme-ready" }).then(rsaInit);
+    catch (e) {
+        console.error("RSA: Error in SDK initialization", e);
+    }
+}).catch((e) => {
+    console.error("RSA: Error in SDK_INITIALIZED promise", e);
 });
 function rsaInit() {
     if (!WazeWrap.Ready) {
@@ -351,6 +362,7 @@ function rsaInit() {
     const CountryDataSheetInfo = {};
     const RoadAbbr = {};
     let mainSheetLoaded = false;
+    const loadingCountries = new Set(); // Track which countries are currently being loaded
     const iconsAllowingNoText = new Set([
         2000, // Atlantic City Expy
         2079, // Garden State Parkway
@@ -706,10 +718,10 @@ function rsaInit() {
                     fillOpacity: 1,
                     fill: "black",
                     stroke: "black",
-                    fontColor: "green",
-                    labelOutlineColor: "white",
-                    labelOutlineWidth: 1,
-                    fontSize: 12,
+                    fontColor: "white",
+                    labelOutlineColor: "black",
+                    labelOutlineWidth: 2,
+                    fontSize: 14,
                     display: "grid",
                     label: "${shieldLabel}",
                     labelYOffset: "${shieldLabelYOffset}",
@@ -945,10 +957,13 @@ function rsaInit() {
         const $rsaFixWrapper = $('<div id="rsa-autoWrapper" class="toolbar-button ItemInactive" style="display:none;margin-right:5px;">');
         const $rsaFixInner = $('<div class="group-title toolbar-top-level-item-title rsa" style="margin:5px 0 0 15px;font-size:12px;">RSA Fix</div>');
         // WazeWrap.Interface.Tab('RSA', $rsaTab.html, setupOptions, 'RSA');
-        sdk.Sidebar.registerScriptTab().then((r) => {
+        sdk.Sidebar.registerScriptTab().then(async (r) => {
+            console.log("RSA: Registering sidebar tab");
             r.tabLabel.innerHTML = "RSA";
             r.tabPane.innerHTML = $rsaTab.html;
-            setupOptions();
+            console.log("RSA: Starting setupOptions");
+            await setupOptions();
+            console.log("RSA: setupOptions complete");
         });
         $(`<style type="text/css">${rsaCss}</style>`).appendTo("head");
         // $($rsaFixInner).appendTo($rsaFixWrapper);
@@ -1011,7 +1026,14 @@ function rsaInit() {
         checkOptions();
     }
     async function setupOptions() {
-        await loadSettings();
+        console.log("RSA: setupOptions started");
+        try {
+            await loadSettings();
+            console.log("RSA: loadSettings complete");
+        }
+        catch (e) {
+            console.error("RSA: Error in loadSettings", e);
+        }
         // Create OL layer for display
         sdk.Map.addLayer({
             layerName: rsaMapLayer.layerName,
@@ -1104,12 +1126,22 @@ function rsaInit() {
         // WazeWrap.Events.register('selectionchanged', null, tryScan);
         sdk.Events.on({ eventName: "wme-map-move-end", eventHandler: updateMap });
         sdk.Events.on({ eventName: "wme-map-zoom-changed", eventHandler: updateMap });
-        sdk.Shortcuts.createShortcut({
-            callback: addShieldClick,
-            description: "Activates the Add Shield Button",
-            shortcutId: "addShield",
-            shortcutKeys: "A+83",
-        });
+        const shortcutKeys = "A+83";
+        const keysInUse = sdk.Shortcuts.areShortcutKeysInUse({ shortcutKeys });
+        if (keysInUse) {
+            console.warn("RSA: Shortcut key A+S was already in use, registering addShield without a key binding.");
+        }
+        try {
+            sdk.Shortcuts.createShortcut({
+                callback: addShieldClick,
+                description: "Activates the Add Shield Button",
+                shortcutId: "addShield",
+                shortcutKeys: keysInUse ? null : shortcutKeys,
+            });
+        }
+        catch (e) {
+            console.error("RSA: Failed to register addShield shortcut:", e);
+        }
         // new WazeWrap.Interface.Shortcut('addShield',
         //                                 'Activates the Add Shield Button',
         //                                 'wmersa',
@@ -1221,73 +1253,149 @@ function rsaInit() {
         $("#rsa-resetSettings").attr("value", Strings[LANG].resetSettings);
         checkOptions();
     }
-    const apiKey = "AIzaSyDJaCD-PqytSPVrXZMLqI2UNIsTuy_yLRY";
     const mainRoadSheetID = "10RiokHwpEdcDu5AotXVBbesAzixDSCm9y5x44TRsToI";
-    async function loadCountryAbbr(countryId, sheetKey) {
-        if (!mainSheetLoaded)
+    const gvizCache = new Map(); // Cache parsed gviz responses by URL
+    async function parseGvizResponse(responseText) {
+        const match = responseText.match(/google\.visualization\.Query\.setResponse\(([\s\S]+)\);/);
+        if (!match) {
+            throw new Error("Failed to parse Google Sheet data");
+        }
+        return JSON.parse(match[1]);
+    }
+    async function gvizFetch(url) {
+        // Return cached parsed response if available
+        if (gvizCache.has(url)) {
+            console.log(`RSA: gvizFetch (cached) for URL: ${url}`);
+            return gvizCache.get(url);
+        }
+        console.log(`RSA: gvizFetch called with URL: ${url}`);
+        const promise = new Promise((resolve, reject) => {
+            GM_xmlhttpRequest({
+                method: "GET",
+                url: url,
+                timeout: 10000,
+                onload: (response) => {
+                    console.log(`RSA: gviz request to ${url} returned status ${response.status}`);
+                    if (response.status === 200) {
+                        try {
+                            const json = parseGvizResponse(response.responseText);
+                            resolve(json);
+                        }
+                        catch (e) {
+                            reject(e);
+                        }
+                    }
+                    else {
+                        const err = new Error(`HTTP ${response.status}: ${response.statusText} from ${url}`);
+                        console.error(`RSA: HTTP error`, err);
+                        reject(err);
+                    }
+                },
+                onerror: (err) => {
+                    console.error("RSA: gviz request error", err);
+                    reject(err);
+                },
+                ontimeout: () => {
+                    console.error("RSA: gviz request timeout");
+                    reject(new Error("Request timeout"));
+                },
+            });
+        });
+        // Cache the promise
+        gvizCache.set(url, promise);
+        return promise;
+    }
+    async function loadCountryAbbr(countryId, sheetKey, stateName) {
+        if (!mainSheetLoaded || loadingCountries.has(countryId))
             return;
-        // Load road abbreviation data
-        $.ajaxSetup({ async: false });
-        await $.getJSON(`https://sheets.googleapis.com/v4/spreadsheets/${sheetKey}?includeGridData=true&key=${apiKey}`)
-            .done(async (spreadSheet) => {
+        loadingCountries.add(countryId);
+        try {
             const countryWide = {};
-            let setCountry = false;
-            for (const sheet of spreadSheet.sheets) {
-                if (sheet.properties.title === "Reference")
-                    continue;
-                if (sheet.data[0].rowData.length <= 1)
-                    continue;
-                const stateWide = {};
-                for (const row of sheet.data[0].rowData) {
-                    if (row.values && row.values.length >= 2) {
-                        const matchingRegex = row.values[0].formattedValue;
-                        if (matchingRegex === "Matching Condition")
-                            continue;
-                        const shieldId = Number.parseInt(row.values[1].formattedValue, 10);
-                        stateWide[matchingRegex] = shieldId;
+            // Determine which sheets to load
+            let sheetsToLoad = [""]; // Always load country-wide (default) sheet
+            // If a specific state is requested, load only that state + country-wide
+            if (stateName) {
+                sheetsToLoad.push(stateName);
+            }
+            else {
+                // Initial load: just load country-wide sheet for fast startup
+                // State sheets will be loaded on-demand when needed
+                sheetsToLoad = [""];
+            }
+            // Load sheets in parallel
+            const sheetPromises = sheetsToLoad.map(async (sheetName) => {
+                try {
+                    const sheetUrl = sheetName
+                        ? `https://docs.google.com/spreadsheets/d/${sheetKey}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}`
+                        : `https://docs.google.com/spreadsheets/d/${sheetKey}/gviz/tq?tqx=out:json`;
+                    const json = await gvizFetch(sheetUrl);
+                    if (json.table && json.table.rows && json.table.rows.length > 0) {
+                        const sheetData = {};
+                        for (const row of json.table.rows) {
+                            if (!row.c || row.c.length < 2)
+                                continue;
+                            const abbr = row.c[0]?.v;
+                            const iconIdValue = row.c[1]?.v;
+                            if (!abbr || typeof abbr !== "string" || iconIdValue === null || iconIdValue === undefined)
+                                continue;
+                            const iconID = typeof iconIdValue === "number" ? iconIdValue : parseInt(iconIdValue, 10);
+                            sheetData[abbr] = iconID;
+                        }
+                        return { sheetName, sheetData, count: Object.keys(sheetData).length };
                     }
                 }
-                countryWide[sheet.properties.title] = stateWide;
-                setCountry = true;
+                catch (e) {
+                    // Sheet might not exist, skip it
+                }
+                return null;
+            });
+            const results = await Promise.allSettled(sheetPromises);
+            for (const result of results) {
+                if (result.status === "fulfilled" && result.value) {
+                    const { sheetName, sheetData } = result.value;
+                    countryWide[sheetName] = sheetData;
+                }
             }
-            if (setCountry)
+            if (Object.keys(countryWide).length > 0 && Object.values(countryWide).some(state => Object.keys(state).length > 0)) {
                 RoadAbbr[countryId] = countryWide;
-        }).fail(() => {
-            console.error("RSA: Unable to load road abbreviation data from Google Sheets");
-        });
-        $.ajaxSetup({ async: true });
+            }
+        }
+        catch (e) {
+            console.error("RSA: Unable to load road abbreviation data from Google Sheets", e);
+        }
+        finally {
+            loadingCountries.delete(countryId);
+        }
     }
-    function loadMainRoadAbbr() {
-        $.getJSON(`https://sheets.googleapis.com/v4/spreadsheets/${mainRoadSheetID}?includeGridData=true&key=${apiKey}`, (spreadSheet) => {
-            for (const sheet of spreadSheet.sheets) {
-                if (sheet.properties.title === "CountryData") {
-                    for (const row of sheet.data[0].rowData) {
-                        if (row.values && row.values.length >= 2) {
-                            const country = row.values[0].formattedValue;
-                            if (country === "Country")
-                                continue;
-                            const countryCode = Number.parseInt(row.values[1].formattedValue, 10);
-                            if (row.values.length >= 3) {
-                                const sheetKey = row.values[2].formattedValue;
-                                CountryDataSheetInfo[countryCode] = sheetKey;
-                            }
-                        }
+    async function loadMainRoadAbbr() {
+        try {
+            const gvizUrl = `https://docs.google.com/spreadsheets/d/${mainRoadSheetID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent("CountryData")}`;
+            const json = await gvizFetch(gvizUrl);
+            if (json.table && json.table.rows) {
+                for (const row of json.table.rows) {
+                    if (!row.c || row.c.length < 3)
+                        continue;
+                    const country = row.c[0]?.v;
+                    if (!country || country === "Country")
+                        continue;
+                    const countryCode = parseInt(row.c[1]?.v ?? "0", 10);
+                    const sheetKey = row.c[2]?.v;
+                    if (countryCode && sheetKey) {
+                        CountryDataSheetInfo[countryCode] = sheetKey;
                     }
                 }
             }
             mainSheetLoaded = true;
-        }).done(() => {
             console.log("RSA: Main Road Abbreviations are Loaded");
-        }).fail(() => {
-            console.error("RSA: Unable to load road abbreviation data from Google Sheets");
-        });
+        }
+        catch (e) {
+            console.error("RSA: Unable to load road abbreviation data from Google Sheets", e);
+        }
     }
     async function loadSettings() {
+        console.log("RSA: loadSettings started");
         const localSettings = JSON.parse(localStorage.getItem("RSA_Settings"));
-        // const serverSettings = await WazeWrap.Remote.RetrieveSettings("RSA_Settings");
-        // if (!serverSettings) {
-        //     console.error("RSA: Error communicating with WW settings server");
-        // }
+        console.log("RSA: localSettings parsed, calling loadMainRoadAbbr");
         const defaultSettings = {
             lastSaveAction: 0,
             enableScript: true,
@@ -1325,13 +1433,7 @@ function rsaInit() {
             iconLayerVisible: false,
         };
         rsaSettings = $.extend({}, defaultSettings, localSettings);
-        // if (serverSettings && serverSettings.lastSaveAction > rsaSettings.lastSaveAction) {
-        //     $.extend(rsaSettings, serverSettings);
-        //     // console.log('RSA: server settings used');
-        // } else {
-        //     // console.log('RSA: local settings used');
-        // }
-        loadMainRoadAbbr();
+        await loadMainRoadAbbr();
     }
     async function saveSettings() {
         const { enableScript, HighSegShields, ShowSegShields, SegShieldMissing, SegShieldError, HighNodeShields, ShowNodeShields, ShowExitShields, SegHasDir, SegInvDir, ShowTurnTTS, AlertTurnTTS, ShowTowards, ShowVisualInst, NodeShieldMissing, HighSegClr, MissSegClr, ErrSegClr, HighNodeClr, MissNodeClr, SegHasDirClr, SegInvDirClr, TitleCaseClr, TitleCaseSftClr, ShowRamps, AlternativeShields, mHPlus, titleCase, checkTWD, checkTTS, checkVI, mapLayerVisible, iconLayerVisible, } = rsaSettings;
@@ -1403,14 +1505,6 @@ function rsaInit() {
         if (localStorage) {
             localStorage.setItem("RSA_Settings", JSON.stringify(localSettings));
         }
-        // const serverSave = await WazeWrap.Remote.SaveSettings("RSA_Settings", localSettings);
-        // if (serverSave === null) {
-        //     console.warn("RSA: User PIN not set in WazeWrap tab");
-        // } else {
-        //     if (serverSave === false) {
-        //         console.error("RSA: Unable to save settings to server");
-        //     }
-        // }
     }
     function checkOptions() {
         const countries = sdk.DataModel.Countries.getAll();
@@ -1542,7 +1636,7 @@ function rsaInit() {
             WazeWrap.Alerts.error(GM_info.script.name, "You must have only 1 segment selected to use the shield editing menu");
         }
     }
-    function tryScan() {
+    async function tryScan() {
         if (!rsaSettings.enableScript)
             return;
         // Reset the array of objects that need names fixed
@@ -1561,7 +1655,7 @@ function rsaInit() {
             //     scanSeg(s);
             // }
             for (const s of sdk.DataModel.Segments.getAll()) {
-                processSeg(s);
+                await processSeg(s);
             }
         }
         // Scan all nodes on screen
@@ -1573,7 +1667,7 @@ function rsaInit() {
         }
     }
     const majorRoads = new Set([3, 4, 6, 7]);
-    function processSeg(seg) {
+    async function processSeg(seg) {
         if ((!rsaSettings.ShowRamps && seg.roadType === 4) ||
             (rsaSettings.mHPlus && !majorRoads.has(seg.roadType)))
             return;
@@ -1608,7 +1702,7 @@ function rsaInit() {
         // let oldStateName = W.model.states.getObjectById(cityID.stateID).attributes.name;
         const stateName = address.state === null ? "" : address.state.name;
         const countryID = address.country?.id;
-        const candidate = isSegmentCandidate(address, stateName, countryID);
+        const candidate = await isSegmentCandidate(address, stateName, countryID);
         // Display shield on map
         function checkDeclutterSettings(seg) {
             let result = false;
@@ -1688,11 +1782,11 @@ function rsaInit() {
             displayNodeIcons(node, guidance);
     }
     // Function written by kpouer to accommodate French conventions of shields being based on alt names
-    function isSegmentCandidate(address, stateName, countryId) {
-        let candidate = isStreetCandidate(address.street, stateName, countryId);
+    async function isSegmentCandidate(address, stateName, countryId) {
+        let candidate = await isStreetCandidate(address.street, stateName, countryId);
         if (!candidate.isCandidate && address.country !== null && address.country?.id !== undefined && CheckAltName.has(address.country.id)) {
             for (const altAddress of address.altStreets) {
-                candidate = isStreetCandidate(altAddress.street, stateName, countryId);
+                candidate = await isStreetCandidate(altAddress.street, stateName, countryId);
                 if (candidate.isCandidate) {
                     return candidate;
                 }
@@ -1700,7 +1794,7 @@ function rsaInit() {
         }
         return candidate;
     }
-    function isStreetCandidate(street, stateName, countryId) {
+    async function isStreetCandidate(street, stateName, countryId) {
         const info = { isCandidate: false, iconID: null };
         if (street === null || countryId === null || countryId === undefined) {
             return info;
@@ -1713,11 +1807,11 @@ function rsaInit() {
                 RoadAbbr[countryId] = false;
                 return info;
             }
-            loadCountryAbbr(countryId, CountryDataSheetInfo[countryId]);
+            await loadCountryAbbr(countryId, CountryDataSheetInfo[countryId], stateName);
         }
         // if (stateName === null) stateName = "";
         //Check to see if the country has states configured in RSA by looking for a key with nothing in it
-        if (street.name) {
+        if (street.name && typeof RoadAbbr[countryId] === "object") {
             const noStates = ("" in RoadAbbr[countryId]);
             const abbrvs = noStates
                 ? RoadAbbr[countryId][""]
