@@ -11,6 +11,8 @@
 // @exclude      https://www.waze.com/user/editor*
 // @require      https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js
 // @require      https://cdn.jsdelivr.net/npm/@turf/turf@7/turf.min.js
+// @updateURL    https://update.greasyfork.org/scripts/425050/WME%20Road%20Shield%20Assistant.meta.js
+// @downloadURL  https://update.greasyfork.org/scripts/425050/WME%20Road%20Shield%20Assistant.user.js
 // @grant        GM_xmlhttpRequest
 // @grant        unsafeWindow
 // @connect      greasyfork.org
