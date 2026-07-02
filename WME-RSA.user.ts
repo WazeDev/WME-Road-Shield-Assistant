@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME Road Shield Assistant
 // @namespace    https://greasyfork.org/en/users/286957-skidooguy
-// @version      2026.04.23.001
+// @version      2026.06.28.001
 // @description  Adds shield information display to WME
 // @author       SkiDooGuy, jm6087, Karlsosha
 // @match        https://www.waze.com/editor*
@@ -11,6 +11,8 @@
 // @exclude      https://www.waze.com/user/editor*
 // @require      https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js
 // @require      https://cdn.jsdelivr.net/npm/@turf/turf@7/turf.min.js
+// @updateURL    https://update.greasyfork.org/scripts/425050/WME%20Road%20Shield%20Assistant.meta.js
+// @downloadURL  https://update.greasyfork.org/scripts/425050/WME%20Road%20Shield%20Assistant.user.js
 // @grant        GM_xmlhttpRequest
 // @grant        unsafeWindow
 // @connect      greasyfork.org
@@ -1348,46 +1350,46 @@ function rsaInit() {
     const apiKey = "AIzaSyDJaCD-PqytSPVrXZMLqI2UNIsTuy_yLRY";
     const mainRoadSheetID = "10RiokHwpEdcDu5AotXVBbesAzixDSCm9y5x44TRsToI";
     async function loadCountryAbbr(countryId: number, sheetKey: string) {
-        if(!mainSheetLoaded) return;
+        if (!mainSheetLoaded) return;
         // Load road abbreviation data
-        $.ajaxSetup({ async: false})
+        $.ajaxSetup({ async: false })
         await $.getJSON(`https://sheets.googleapis.com/v4/spreadsheets/${sheetKey}?includeGridData=true&key=${apiKey}`)
-        .done(async (spreadSheet) => {
-            const countryWide: StateRoadInfo = {};
-            let setCountry = false;
-            for (const sheet of spreadSheet.sheets) {
-                if (sheet.properties.title === "Reference") continue;
-                if(sheet.data[0].rowData.length <= 1) continue;
-                const stateWide: RoadInfo = {};
-                for (const row of sheet.data[0].rowData) {
-                    if (row.values && row.values.length >= 2) {
-                        const matchingRegex = row.values[0].formattedValue;
-                        if (matchingRegex === "Matching Condition") continue;
-                        const shieldId = Number.parseInt(row.values[1].formattedValue, 10);
-                        stateWide[matchingRegex] = shieldId;
+            .done(async (spreadSheet) => {
+                const countryWide: StateRoadInfo = {};
+                let setCountry = false;
+                for (const sheet of spreadSheet.sheets) {
+                    if (sheet.properties.title === "Reference") continue;
+                    if (sheet.data[0].rowData.length <= 1) continue;
+                    const stateWide: RoadInfo = {};
+                    for (const row of sheet.data[0].rowData) {
+                        if (row.values && row.values.length >= 2) {
+                            const matchingRegex = row.values[0].formattedValue;
+                            if (matchingRegex === "Matching Condition") continue;
+                            const shieldId = Number.parseInt(row.values[1].formattedValue, 10);
+                            stateWide[matchingRegex] = shieldId;
+                        }
                     }
+                    countryWide[sheet.properties.title] = stateWide;
+                    setCountry = true;
                 }
-                countryWide[sheet.properties.title] = stateWide;
-                setCountry = true;
-            }
-            if(setCountry) RoadAbbr[countryId] = countryWide;
-        }).fail(() => {
-            console.error("RSA: Unable to load road abbreviation data from Google Sheets");
-        });
+                if (setCountry) RoadAbbr[countryId] = countryWide;
+            }).fail(() => {
+                console.error("RSA: Unable to load road abbreviation data from Google Sheets");
+            });
         $.ajaxSetup({ async: true })
 
     }
 
     function loadMainRoadAbbr() {
         $.getJSON(`https://sheets.googleapis.com/v4/spreadsheets/${mainRoadSheetID}?includeGridData=true&key=${apiKey}`, (spreadSheet) => {
-            for(const sheet of spreadSheet.sheets) {
-                if(sheet.properties.title === "CountryData") {
-                    for(const row of sheet.data[0].rowData) {
-                        if(row.values && row.values.length >= 2) {
+            for (const sheet of spreadSheet.sheets) {
+                if (sheet.properties.title === "CountryData") {
+                    for (const row of sheet.data[0].rowData) {
+                        if (row.values && row.values.length >= 2) {
                             const country = row.values[0].formattedValue;
-                            if(country === "Country") continue;
+                            if (country === "Country") continue;
                             const countryCode = Number.parseInt(row.values[1].formattedValue, 10);
-                            if(row.values.length >= 3) {
+                            if (row.values.length >= 3) {
                                 const sheetKey = row.values[2].formattedValue;
                                 CountryDataSheetInfo[countryCode] = sheetKey;
                             }
@@ -1768,7 +1770,7 @@ function rsaInit() {
         // const city: City | null = sdk.DataModel.Cities.getById({ cityId: street.cityId });
         // if (city === null) return;
         // const stateID = city.stateId;
-        let address = sdk.DataModel.Segments.getAddress({segmentId: seg.id});
+        let address = sdk.DataModel.Segments.getAddress({ segmentId: seg.id });
 
         if (rsaSettings.AlternativeShields) {
             for (const altAddress of address.altStreets) {
@@ -1778,9 +1780,9 @@ function rsaInit() {
                         address = altAddress
                         break;
                     }
-                } 
+                }
                 if (alternativeType === "AlternativeNoCity") {
-                    if(altAddress.city?.name === "") {
+                    if (altAddress.city?.name === "") {
                         address = altAddress
                         break;
                     }
@@ -1817,7 +1819,7 @@ function rsaInit() {
                     createHighlight(seg, rsaSettings.ErrSegClr);
                 }
             }
-            
+
 
             // If not candidate and has shield
             if (rsaSettings.SegShieldError && !candidate.isCandidate) createHighlight(seg, rsaSettings.ErrSegClr);
@@ -1851,7 +1853,7 @@ function rsaInit() {
         };
         const turns = sdk.DataModel.Turns.getTurnsThroughNode({ nodeId: node.id });
         for (const turn of turns) {
-            if(!turn.isAllowed) continue;
+            if (!turn.isAllowed) continue;
             // let oldTurn = W.model.getTurnGraph().getTurnThroughNode(node,turn.fromSegmentId,turn.toSegmentId);
             guidance.tts = guidance.tts || turn.hasCustomTTS;
             guidance.shield = guidance.shield || turn.hasShieldsPopulated;
@@ -1897,11 +1899,11 @@ function rsaInit() {
             return info;
         }
 
-        if(!RoadAbbr[countryId]) {
-            if(!mainSheetLoaded) {
+        if (!RoadAbbr[countryId]) {
+            if (!mainSheetLoaded) {
                 return info;
             }
-            if(mainSheetLoaded && !CountryDataSheetInfo[countryId]) {
+            if (mainSheetLoaded && !CountryDataSheetInfo[countryId]) {
                 RoadAbbr[countryId] = false;
                 return info;
             }
@@ -1980,7 +1982,7 @@ function rsaInit() {
     }
 
     function matchTitleCase(street: Street | null) {
-        if(!street) return;
+        if (!street) return;
         const dir = street.direction;
         let isBad = false;
         if (dir !== "" && dir !== null) {
@@ -2113,7 +2115,7 @@ function rsaInit() {
         };
         let count = 0;
 
-        const pixelPos = sdk.Map.getPixelFromLonLat({ lonLat: {lon: node.geometry.coordinates[0], lat: node.geometry.coordinates[1]} });
+        const pixelPos = sdk.Map.getPixelFromLonLat({ lonLat: { lon: node.geometry.coordinates[0], lat: node.geometry.coordinates[1] } });
         // const pixelPos = proj4("EPSG:4326", "EPSG:3857", node.geometry.coordinates);
         const startPoint = { x: pixelPos.x, y: pixelPos.y };
         const lblStart = { x: startPoint.x - labelDistance().label, y: startPoint.y - labelDistance().label };
@@ -2144,7 +2146,7 @@ function rsaInit() {
         // var pointLabel = new OpenLayers.Geometry.Point(lblStart.x, lblStart.y);
 
         // const nodeLabelCoordinates = proj4("EPSG:3857", "EPSG:4326", [lblStart.x, lblStart.y]);
-        const nodeLabelCoordinates = sdk.Map.getLonLatFromPixel( { x: lblStart.x, y: lblStart.y } );
+        const nodeLabelCoordinates = sdk.Map.getLonLatFromPixel({ x: lblStart.x, y: lblStart.y });
         const nodeLabel = turf.point(
             [nodeLabelCoordinates.lon, nodeLabelCoordinates.lat],
             {
