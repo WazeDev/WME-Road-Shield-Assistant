@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME Road Shield Assistant
 // @namespace    https://greasyfork.org/en/users/286957-skidooguy
-// @version      2026.06.28.001
+// @version      2026.07.07.001
 // @description  Adds shield information display to WME
 // @author       SkiDooGuy, jm6087, Karlsosha
 // @match        https://www.waze.com/editor*
@@ -853,6 +853,8 @@ function rsaInit() {
         LANG = locale.localeCode.toLowerCase();
 
         console.log("RSA: Initializing...");
+        startScriptUpdateMonitor();
+
 
         // let UpdateObj = sdk.DataModel. require('Waze/Action/UpdateObject');
         // let SetTurn = require('Waze/Model/Graph/Actions/SetTurn');
@@ -1059,6 +1061,22 @@ function rsaInit() {
             FORUM_LINK
         );
         console.log("RSA: loaded");
+    }
+
+    function startScriptUpdateMonitor() {
+        try {
+            const updateMonitor = new WazeWrap.Alerts.ScriptUpdateMonitor(
+                GM_info.script.name,
+                GM_info.script.version,
+                GM_info.script.downloadURL,
+                GM_xmlhttpRequest,
+                GM_info.script.updateURL
+            );
+            updateMonitor.start();
+        } catch (ex) {
+            // Report, but don't stop if ScriptUpdateMonitor fails.
+            console.error("WME RSA:", ex);
+        }
     }
 
     function processAlternativeSettings() {
