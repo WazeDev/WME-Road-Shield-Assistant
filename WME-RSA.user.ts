@@ -1,7 +1,7 @@
     // ==UserScript==
     // @name         WME Road Shield Assistant
     // @namespace    https://greasyfork.org/en/users/286957-skidooguy
-    // @version      2026.07.07.001
+    // @version      2026.08.31.001
     // @description  Adds shield information display to WME
     // @author       SkiDooGuy, jm6087, Karlsosha
     // @match        https://www.waze.com/editor*
@@ -52,7 +52,8 @@
         const GF_LINK = "https://greasyfork.org/en/scripts/425050-wme-road-shield-assisstant";
         const FORUM_LINK = "https://www.waze.com/discuss/t/script-road-shield-assistant-rsa/227100";
         const RSA_UPDATE_NOTES = `<b>NEW:</b><br>
-        - Remove Waze Wrap Remote Storage<br>
+        - Move Translation From Code to Spreadsheet.<br>
+        - Add Back Display of Exit Signs<br>
     <b>BUGFIXES:</b><br>
     <b>KNOWN ISSUES:</b><br><br>`;
 
