@@ -1044,12 +1044,12 @@
         </div>`,
             ].join(" ");
 
-            const $rsaFixWrapper = $(
-                '<div id="rsa-autoWrapper" class="toolbar-button ItemInactive" style="display:none;margin-right:5px;">'
-            );
-            const $rsaFixInner = $(
-                '<div class="group-title toolbar-top-level-item-title rsa" style="margin:5px 0 0 15px;font-size:12px;">RSA Fix</div>'
-            );
+            // const $rsaFixWrapper = $(
+            //     '<div id="rsa-autoWrapper" class="toolbar-button ItemInactive" style="display:none;margin-right:5px;">'
+            // );
+            // const $rsaFixInner = $(
+            //     '<div class="group-title toolbar-top-level-item-title rsa" style="margin:5px 0 0 15px;font-size:12px;">RSA Fix</div>'
+            // );
 
             // WazeWrap.Interface.Tab('RSA', $rsaTab.html, setupOptions, 'RSA');
             sdk.Sidebar.registerScriptTab().then((r) => {
@@ -1157,8 +1157,6 @@
             $.ajaxSetup({ async: false })
             await $.getJSON(`https://sheets.googleapis.com/v4/spreadsheets/${mainRoadSheetID}?includeGridData=true&key=${apiKey}`)
                 .done((spreadSheet) => {
-                    const countryWide: StateRoadInfo = {};
-                    let setCountry = false;
                     for (const sheet of spreadSheet.sheets) {
                         if (sheet.properties.title !== "TRANSLATIONS") continue;
                         if (sheet.data[0].rowData.length <= 1) continue;
@@ -1166,7 +1164,6 @@
                         for (let ridx = 0; ridx < sheet.data[0].rowData.length; ridx++) {
                             const row = sheet.data[0].rowData[ridx];
                             if (row.values && row.values.length >= 2) {
-                                const matchingRegex = row.values[0].formattedValue;
                                 if(ridx === 0) {
                                     tempTranslationKeys = row.values.map(value => value.formattedValue);
                                     continue;
