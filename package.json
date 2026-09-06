@@ -1,12 +1,12 @@
 {
   "name": "wme-road-shield-assistant",
   "devDependencies": {
-    "@biomejs/biome": "2.4.12",
+    "@biomejs/biome": "2.5.11",
     "@turf/turf": "^7.3.1",
-    "@types/jquery": "^4.0.0",
+    "@types/jquery": "^4.0.1",
     "@types/tampermonkey": "^5.0.5",
     "@types/underscore": "^1.13.0",
-    "typescript": "^6.0.3",
+    "typescript": "^7.0.2",
     "underscore": "^1.13.7",
     "wme-sdk-typings": "https://web-assets.waze.com/wme_sdk_docs/beta/latest/wme-sdk-typings.tgz"
   },
@@ -23,7 +23,7 @@
   },
   "private": true,
   "dependencies": {
-    "jquery": "^3.7.1",
+    "jquery": "^4.0.0",
     "prettier": "^3.8.3"
   }
 }

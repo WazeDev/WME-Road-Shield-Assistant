@@ -2,7 +2,7 @@
 // ==UserScript==
 // @name         WME Road Shield Assistant
 // @namespace    https://greasyfork.org/en/users/286957-skidooguy
-// @version      2026.07.07.001
+// @version      2026.08.31.001
 // @description  Adds shield information display to WME
 // @author       SkiDooGuy, jm6087, Karlsosha
 // @match        https://www.waze.com/editor*
@@ -22,6 +22,7 @@
 /* global W */
 /* global WazeWrap */
 /* global turf */
+/* global $ */
 // import type { Node, Segment, SegmentAddress, Street, Turn, WmeSDK } from "wme-sdk-typings";
 // import type { Point, LineString, Position, Feature } from "geojson";
 // import * as turf from "@turf/turf";
@@ -46,9 +47,12 @@ function rsaInit() {
     const GF_LINK = "https://greasyfork.org/en/scripts/425050-wme-road-shield-assisstant";
     const FORUM_LINK = "https://www.waze.com/discuss/t/script-road-shield-assistant-rsa/227100";
     const RSA_UPDATE_NOTES = `<b>NEW:</b><br>
-    - Remove Waze Wrap Remote Storage<br>
-<b>BUGFIXES:</b><br>
-<b>KNOWN ISSUES:</b><br><br>`;
+        - Move Translation From Code to Spreadsheet.<br>
+        - Add Back Display of Exit Signs<br>
+    <b>BUGFIXES:</b><br>
+    <b>KNOWN ISSUES:</b><br><br>`;
+    const apiKey = "AIzaSyDJaCD-PqytSPVrXZMLqI2UNIsTuy_yLRY";
+    const mainRoadSheetID = "10RiokHwpEdcDu5AotXVBbesAzixDSCm9y5x44TRsToI";
     let CountryID;
     (function (CountryID) {
         CountryID[CountryID["AFGANISTAN"] = 1] = "AFGANISTAN";
@@ -367,213 +371,215 @@ function rsaInit() {
         2069, // Blue Ridge Pkwy
         5058, // QEW
     ]);
-    const Strings = {
-        en: {
-            enableScript: "Script enabled",
-            HighSegShields: "Segments with Shields",
-            HighSegShieldsClr: "Segments with Shields",
-            ShowSegShields: "Show Segment Shields on Map",
-            SegShieldMissing: "Segments that might be missing shields",
-            SegShieldMissingClr: "Segments that might be missing shields",
-            SegShieldError: "Segments that have shields but maybe shouldn't",
-            SegShieldErrorClr: "Segments that have shields but maybe shouldn't",
-            HighNodeShields: "Nodes with Shields (TG)",
-            HighNodeShieldsClr: "Nodes with Shields (TG)",
-            ShowNodeShields: "Show Node Shield Info",
-            ShowExitShields: "Has Exit Signs",
-            ShowTurnTTS: "Has TIO",
-            AlertTurnTTS: "Alert if TTS is different from default",
-            NodeShieldMissing: "Nodes that might be missing shields",
-            NodeShieldMissingClr: "Nodes that might be missing shields",
-            resetSettings: "Reset Settings",
-            disabledFeat: "(Feature not configured for this country)",
-            ShowTowards: "Has Towards",
-            ShowVisualInst: "Has Visual Instruction",
-            SegHasDir: "Segment Shields with direction",
-            SegHasDirClr: "Segment Shields with direction",
-            SegInvDir: "Segment Shields without direction",
-            SegInvDirClr: "Segment Shields without direction",
-            IconHead: "Map Icons",
-            HighlightHead: "Highlights",
-            HighlightColors: "Highlight Colors",
-            ShowRamps: "Include Ramps",
-            Experimental: "Experimental Features (Use at Your own Risk)",
-            AlternativeShields: "Alternative Name Shields",
-            AlternativePrimaryCity: "Alternative Street with Primary City",
-            AlternativeNoCity: "Alternative Street with No City",
-            mHPlus: "Only show on minor highways or greater",
-            titleCase: "Segments/nodes with direction not in large-and-small-caps format",
-            TitleCaseClr: "Segments/nodes with direction not in large-and-small-caps format",
-            TitleCaseSftClr: "Direction in free text might not be in large-and-small-caps format",
-            checkTWD: "Include Towards field",
-            checkTTS: "Include TTS field",
-            checkVI: "Include Visual Instruction field",
-        },
-        "en-us": {
-            enableScript: "Script enabled",
-            HighSegShields: "Segments with Shields",
-            HighSegShieldsClr: "Segments with Shields",
-            ShowSegShields: "Show Segment Shields on Map",
-            SegShieldMissing: "Segments that might be missing shields",
-            SegShieldMissingClr: "Segments that might be missing shields",
-            SegShieldError: "Segments that have shields but maybe shouldn't",
-            SegShieldErrorClr: "Segments that have shields but maybe shouldn't",
-            HighNodeShields: "Nodes with Shields (TG)",
-            HighNodeShieldsClr: "Nodes with Shields (TG)",
-            ShowNodeShields: "Show Node Shield Info",
-            ShowExitShields: "Has Exit Signs",
-            ShowTurnTTS: "Has TIO",
-            AlertTurnTTS: "Alert if TTS is different from default",
-            NodeShieldMissing: "Nodes that might be missing shields",
-            NodeShieldMissingClr: "Nodes that might be missing shields",
-            resetSettings: "Reset Settings",
-            disabledFeat: "(Feature not configured for this country)",
-            ShowTowards: "Has Towards",
-            ShowVisualInst: "Has Visual Instruction",
-            SegHasDir: "Segment Shields with direction",
-            SegHasDirClr: "Segment Shields with direction",
-            SegInvDir: "Segment Shields without direction",
-            SegInvDirClr: "Segment Shields without direction",
-            IconHead: "Map Icons",
-            HighlightHead: "Highlights",
-            HighlightColors: "Highlight Colors",
-            ShowRamps: "Include Ramps",
-            Experimental: "Experimental Features (Unstable use at Your own Risk)",
-            AlternativeShields: "Alternative Name Shields",
-            AlternativePrimaryCity: "Alternative Street with Primary City",
-            AlternativeNoCity: "Alternative Street with No City",
-            mHPlus: "Only show on minor highways or greater",
-            titleCase: "Segments/nodes with direction not in large-and-small-caps format",
-            TitleCaseClr: "Segments/nodes with direction not in large-and-small-caps format",
-            TitleCaseSftClr: "Direction in free text might not be in large-and-small-caps format",
-            checkTWD: "Include Towards field",
-            checkTTS: "Include TTS field",
-            checkVI: "Include Visual Instruction field",
-        },
-        "es-419": {
-            enableScript: "Script habilitado",
-            HighSegShields: "Segmentos con escudos",
-            HighSegShieldsClr: "Segmentos con escudos",
-            ShowSegShields: "Mostrar escudos de segmentos en el mapa",
-            SegShieldMissing: "Segmentos a los que les pueden faltar escudos",
-            SegShieldMissingClr: "Segmentos a los que les pueden faltar escudos",
-            SegShieldError: "Segmentos que tienen escudos y quizá no deberían",
-            SegShieldErrorClr: "Segmentos que tienen escudos y quizá no deberían",
-            HighNodeShields: "Nodos con escudos (TG)",
-            HighNodeShieldsClr: "Nodos con escudos (TG)",
-            ShowNodeShields: "Mostrar Info de Escudo en Nodo",
-            ShowExitShields: "Incluir iconos de giro (si existen)",
-            ShowTurnTTS: "Incuir TTS",
-            AlertTurnTTS: "Alertar si TTS fue modificado",
-            NodeShieldMissing: "Nodos a los que les pueden faltar escudos",
-            NodeShieldMissingClr: "Nodos a los que les pueden faltar escudos",
-            resetSettings: "Reiniciar ajustes",
-            disabledFeat: "(Funcionalidad no configurada para ese país)",
-            ShowTowards: "Incluir dirección (si existe)",
-            ShowVisualInst: "Incluir instrucción visual",
-            SegHasDir: "Escudos con dirección",
-            SegHasDirClr: "Escudos con dirección",
-            SegInvDir: "Escudos sin dirección",
-            SegInvDirClr: "Escudos sin dirección",
-            IconHead: "Iconos en mapa",
-            HighlightHead: "Destacar",
-            HighlightColors: "Reseña de Colores",
-            ShowRamps: "Incluir Rampas",
-            Experimental: "Experimental Features",
-            AlternativeShields: "Alternative Name Shields",
-            AlternativePrimaryCity: "Alternative Street with Primary City",
-            AlternativeNoCity: "Alternative Street with No City",
-            mHPlus: "Only show on minor highways or greater",
-            titleCase: "Segments/nodes with direction not in large-and-small-caps format",
-            TitleCaseClr: "Segments/nodes with direction not in large-and-small-caps format",
-            TitleCaseSftClr: "Direction in free text might not be in large-and-small-caps format",
-            checkTWD: "Include Towards field",
-            checkTTS: "Include TTS field",
-            checkVI: "Include Visual Instruction field",
-        },
-        uk: {
-            enableScript: "Скріпт вимкнено",
-            HighSegShields: "Сегменти з шильдами",
-            HighSegShieldsClr: "Сегменти з шильдами",
-            ShowSegShields: "Показувати шильди на мапі",
-            SegShieldMissing: "Сегменти, яким можливо потрібні шильди",
-            SegShieldMissingClr: "Сегменти, яким можливо потрібні шильди",
-            SegShieldError: "Сегменти, які мають шильди, але можливо вони непотрібні",
-            SegShieldErrorClr: "Сегменти, які мають шильди, але можливо вони непотрібні",
-            HighNodeShields: "Вузли з шильдами (TG)",
-            HighNodeShieldsClr: "Вузли з шильдами (TG)",
-            ShowNodeShields: "Показувати деталі шильда на вузлі ",
-            ShowExitShields: "Включити іконку повороту (якщо вони є)",
-            ShowTurnTTS: "Вимкнути TTS",
-            AlertTurnTTS: "Сповіщати, якщо TTS відрізняється від типового",
-            NodeShieldMissing: "Вузли, на яких можуть бути відсутні щити",
-            NodeShieldMissingClr: "Вузли, на яких можуть бути відсутні щити",
-            resetSettings: "Скинути налаштування",
-            disabledFeat: "Відсутні налаштування для цієї страни",
-            ShowTowards: "Включаючи Towards (якщо існує)",
-            ShowVisualInst: "Включаючи візуальні інструкції",
-            SegHasDir: "Шильди з напрямками",
-            SegHasDirClr: "Шильди з напрямками",
-            SegInvDir: "Шильди без напрямків",
-            SegInvDirClr: "Шильди без напрямків",
-            IconHead: "Іконки на мапі",
-            HighlightHead: "Підсвічувати",
-            HighlightColors: "Кольори підсвічування",
-            ShowRamps: "Включаючи рампи",
-            Experimental: "Экспериментальні засобливості",
-            AlternativeShields: "Шильди альтернатівних назв",
-            AlternativePrimaryCity: "Альтернативна назва с основним містом",
-            AlternativeNoCity: "Альтернативна назва без міста",
-            mHPlus: "Only show on minor highways or greater",
-            titleCase: "Segments/nodes with direction not in large-and-small-caps format",
-            TitleCaseClr: "Segments/nodes with direction not in large-and-small-caps format",
-            TitleCaseSftClr: "Direction in free text might not be in large-and-small-caps format",
-            checkTWD: "Include Towards field",
-            checkTTS: "Include TTS field",
-            checkVI: "Include Visual Instruction field",
-        },
-        fr: {
-            enableScript: "Script activé",
-            HighSegShields: "Segments avec cartouche",
-            HighSegShieldsClr: "Segments avec cartouche",
-            ShowSegShields: "Afficher les cartouches sur la carte",
-            SegShieldMissing: "Segments dont le cartouche pourrait manquer",
-            SegShieldMissingClr: "Segments dont le cartouche pourrait manquer",
-            SegShieldError: "Segments ayant un cartouche mais ne devraient peut-être pas",
-            SegShieldErrorClr: "Segments ayant un cartouche mais ne devraient peut-être pas",
-            HighNodeShields: "Noeuds avec cartouche (TG)",
-            HighNodeShieldsClr: "Noeuds avec cartouche (TG)",
-            ShowNodeShields: "Afficher les infos des cartouches de noeuds",
-            ShowExitShields: "As des panneaux de sortie",
-            ShowTurnTTS: "Has TIO",
-            AlertTurnTTS: "Alert if TTS is different from default",
-            NodeShieldMissing: "Noeud dont le cartouche pourrait manquer",
-            NodeShieldMissingClr: "Noeud dont le cartouche pourrait manquer",
-            resetSettings: "Réinitialiser les paramètres",
-            disabledFeat: "Feature not configured for this country",
-            ShowTowards: 'As "En direction de"',
-            ShowVisualInst: "As des instructions visuelles",
-            SegHasDir: "Cartouche de segment avec direction",
-            SegHasDirClr: "Cartouche de segment avec direction",
-            SegInvDir: "Cartouche de segment sans direction",
-            SegInvDirClr: "Cartouche de segment sans direction",
-            IconHead: "Icônes de carte",
-            HighlightHead: "Surlignages",
-            HighlightColors: "Couleurs de surlignage",
-            ShowRamps: "Inclure les bretelles",
-            mHPlus: "Only show on minor highways or greater",
-            Experimental: "Experimental Features",
-            AlternativeShields: "Alternative Name Shields",
-            AlternativePrimaryCity: "Alternative Street with Primary City",
-            AlternativeNoCity: "Alternative Street with No City",
-            titleCase: "Segments/nodes with direction not in large-and-small-caps format",
-            TitleCaseClr: "Segments/nodes with direction not in large-and-small-caps format",
-            TitleCaseSftClr: "Direction in free text might not be in large-and-small-caps format",
-            checkTWD: 'Inclure le champ "en direction de"',
-            checkTTS: "Inclure le champ TTS",
-            checkVI: "Inclure le champ d'instruction visuel",
-        },
-    };
+    let translationKeys = [];
+    let Localizations = {};
+    // let Localizations: LocalizedSettings = {
+    //     en: {
+    //         enableScript: "Script enabled",
+    //         HighSegShields: "Segments with Shields",
+    //         HighSegShieldsClr: "Segments with Shields",
+    //         ShowSegShields: "Show Segment Shields on Map",
+    //         SegShieldMissing: "Segments that might be missing shields",
+    //         SegShieldMissingClr: "Segments that might be missing shields",
+    //         SegShieldError: "Segments that have shields but maybe shouldn't",
+    //         SegShieldErrorClr: "Segments that have shields but maybe shouldn't",
+    //         HighNodeShields: "Nodes with Shields (TG)",
+    //         HighNodeShieldsClr: "Nodes with Shields (TG)",
+    //         ShowNodeShields: "Show Node Shield Info",
+    //         ShowExitShields: "Has Exit Signs",
+    //         ShowTurnTTS: "Has TIO",
+    //         AlertTurnTTS: "Alert if TTS is different from default",
+    //         NodeShieldMissing: "Nodes that might be missing shields",
+    //         NodeShieldMissingClr: "Nodes that might be missing shields",
+    //         resetSettings: "Reset Settings",
+    //         disabledFeat: "(Feature not configured for this country)",
+    //         ShowTowards: "Has Towards",
+    //         ShowVisualInst: "Has Visual Instruction",
+    //         SegHasDir: "Segment Shields with direction",
+    //         SegHasDirClr: "Segment Shields with direction",
+    //         SegInvDir: "Segment Shields without direction",
+    //         SegInvDirClr: "Segment Shields without direction",
+    //         IconHead: "Map Icons",
+    //         HighlightHead: "Highlights",
+    //         HighlightColors: "Highlight Colors",
+    //         ShowRamps: "Include Ramps",
+    //         Experimental: "Experimental Features (Use at Your own Risk)",
+    //         AlternativeShields: "Alternative Name Shields",
+    //         AlternativePrimaryCity: "Alternative Street with Primary City",
+    //         AlternativeNoCity: "Alternative Street with No City",
+    //         mHPlus: "Only show on minor highways or greater",
+    //         titleCase: "Segments/nodes with direction not in large-and-small-caps format",
+    //         TitleCaseClr: "Segments/nodes with direction not in large-and-small-caps format",
+    //         TitleCaseSftClr: "Direction in free text might not be in large-and-small-caps format",
+    //         checkTWD: "Include Towards field",
+    //         checkTTS: "Include TTS field",
+    //         checkVI: "Include Visual Instruction field",
+    //     },
+    //     "en-us": {
+    //         enableScript: "Script enabled",
+    //         HighSegShields: "Segments with Shields",
+    //         HighSegShieldsClr: "Segments with Shields",
+    //         ShowSegShields: "Show Segment Shields on Map",
+    //         SegShieldMissing: "Segments that might be missing shields",
+    //         SegShieldMissingClr: "Segments that might be missing shields",
+    //         SegShieldError: "Segments that have shields but maybe shouldn't",
+    //         SegShieldErrorClr: "Segments that have shields but maybe shouldn't",
+    //         HighNodeShields: "Nodes with Shields (TG)",
+    //         HighNodeShieldsClr: "Nodes with Shields (TG)",
+    //         ShowNodeShields: "Show Node Shield Info",
+    //         ShowExitShields: "Has Exit Signs",
+    //         ShowTurnTTS: "Has TIO",
+    //         AlertTurnTTS: "Alert if TTS is different from default",
+    //         NodeShieldMissing: "Nodes that might be missing shields",
+    //         NodeShieldMissingClr: "Nodes that might be missing shields",
+    //         resetSettings: "Reset Settings",
+    //         disabledFeat: "(Feature not configured for this country)",
+    //         ShowTowards: "Has Towards",
+    //         ShowVisualInst: "Has Visual Instruction",
+    //         SegHasDir: "Segment Shields with direction",
+    //         SegHasDirClr: "Segment Shields with direction",
+    //         SegInvDir: "Segment Shields without direction",
+    //         SegInvDirClr: "Segment Shields without direction",
+    //         IconHead: "Map Icons",
+    //         HighlightHead: "Highlights",
+    //         HighlightColors: "Highlight Colors",
+    //         ShowRamps: "Include Ramps",
+    //         Experimental: "Experimental Features (Unstable use at Your own Risk)",
+    //         AlternativeShields: "Alternative Name Shields",
+    //         AlternativePrimaryCity: "Alternative Street with Primary City",
+    //         AlternativeNoCity: "Alternative Street with No City",
+    //         mHPlus: "Only show on minor highways or greater",
+    //         titleCase: "Segments/nodes with direction not in large-and-small-caps format",
+    //         TitleCaseClr: "Segments/nodes with direction not in large-and-small-caps format",
+    //         TitleCaseSftClr: "Direction in free text might not be in large-and-small-caps format",
+    //         checkTWD: "Include Towards field",
+    //         checkTTS: "Include TTS field",
+    //         checkVI: "Include Visual Instruction field",
+    //     },
+    //     "es-419": {
+    //         enableScript: "Script habilitado",
+    //         HighSegShields: "Segmentos con escudos",
+    //         HighSegShieldsClr: "Segmentos con escudos",
+    //         ShowSegShields: "Mostrar escudos de segmentos en el mapa",
+    //         SegShieldMissing: "Segmentos a los que les pueden faltar escudos",
+    //         SegShieldMissingClr: "Segmentos a los que les pueden faltar escudos",
+    //         SegShieldError: "Segmentos que tienen escudos y quizá no deberían",
+    //         SegShieldErrorClr: "Segmentos que tienen escudos y quizá no deberían",
+    //         HighNodeShields: "Nodos con escudos (TG)",
+    //         HighNodeShieldsClr: "Nodos con escudos (TG)",
+    //         ShowNodeShields: "Mostrar Info de Escudo en Nodo",
+    //         ShowExitShields: "Incluir iconos de giro (si existen)",
+    //         ShowTurnTTS: "Incuir TTS",
+    //         AlertTurnTTS: "Alertar si TTS fue modificado",
+    //         NodeShieldMissing: "Nodos a los que les pueden faltar escudos",
+    //         NodeShieldMissingClr: "Nodos a los que les pueden faltar escudos",
+    //         resetSettings: "Reiniciar ajustes",
+    //         disabledFeat: "(Funcionalidad no configurada para ese país)",
+    //         ShowTowards: "Incluir dirección (si existe)",
+    //         ShowVisualInst: "Incluir instrucción visual",
+    //         SegHasDir: "Escudos con dirección",
+    //         SegHasDirClr: "Escudos con dirección",
+    //         SegInvDir: "Escudos sin dirección",
+    //         SegInvDirClr: "Escudos sin dirección",
+    //         IconHead: "Iconos en mapa",
+    //         HighlightHead: "Destacar",
+    //         HighlightColors: "Reseña de Colores",
+    //         ShowRamps: "Incluir Rampas",
+    //         Experimental: "Experimental Features",
+    //         AlternativeShields: "Alternative Name Shields",
+    //         AlternativePrimaryCity: "Alternative Street with Primary City",
+    //         AlternativeNoCity: "Alternative Street with No City",
+    //         mHPlus: "Only show on minor highways or greater",
+    //         titleCase: "Segments/nodes with direction not in large-and-small-caps format",
+    //         TitleCaseClr: "Segments/nodes with direction not in large-and-small-caps format",
+    //         TitleCaseSftClr: "Direction in free text might not be in large-and-small-caps format",
+    //         checkTWD: "Include Towards field",
+    //         checkTTS: "Include TTS field",
+    //         checkVI: "Include Visual Instruction field",
+    //     },
+    //     uk: {
+    //         enableScript: "Скріпт вимкнено",
+    //         HighSegShields: "Сегменти з шильдами",
+    //         HighSegShieldsClr: "Сегменти з шильдами",
+    //         ShowSegShields: "Показувати шильди на мапі",
+    //         SegShieldMissing: "Сегменти, яким можливо потрібні шильди",
+    //         SegShieldMissingClr: "Сегменти, яким можливо потрібні шильди",
+    //         SegShieldError: "Сегменти, які мають шильди, але можливо вони непотрібні",
+    //         SegShieldErrorClr: "Сегменти, які мають шильди, але можливо вони непотрібні",
+    //         HighNodeShields: "Вузли з шильдами (TG)",
+    //         HighNodeShieldsClr: "Вузли з шильдами (TG)",
+    //         ShowNodeShields: "Показувати деталі шильда на вузлі ",
+    //         ShowExitShields: "Включити іконку повороту (якщо вони є)",
+    //         ShowTurnTTS: "Вимкнути TTS",
+    //         AlertTurnTTS: "Сповіщати, якщо TTS відрізняється від типового",
+    //         NodeShieldMissing: "Вузли, на яких можуть бути відсутні щити",
+    //         NodeShieldMissingClr: "Вузли, на яких можуть бути відсутні щити",
+    //         resetSettings: "Скинути налаштування",
+    //         disabledFeat: "Відсутні налаштування для цієї страни",
+    //         ShowTowards: "Включаючи Towards (якщо існує)",
+    //         ShowVisualInst: "Включаючи візуальні інструкції",
+    //         SegHasDir: "Шильди з напрямками",
+    //         SegHasDirClr: "Шильди з напрямками",
+    //         SegInvDir: "Шильди без напрямків",
+    //         SegInvDirClr: "Шильди без напрямків",
+    //         IconHead: "Іконки на мапі",
+    //         HighlightHead: "Підсвічувати",
+    //         HighlightColors: "Кольори підсвічування",
+    //         ShowRamps: "Включаючи рампи",
+    //         Experimental: "Экспериментальні засобливості",
+    //         AlternativeShields: "Шильди альтернатівних назв",
+    //         AlternativePrimaryCity: "Альтернативна назва с основним містом",
+    //         AlternativeNoCity: "Альтернативна назва без міста",
+    //         mHPlus: "Only show on minor highways or greater",
+    //         titleCase: "Segments/nodes with direction not in large-and-small-caps format",
+    //         TitleCaseClr: "Segments/nodes with direction not in large-and-small-caps format",
+    //         TitleCaseSftClr: "Direction in free text might not be in large-and-small-caps format",
+    //         checkTWD: "Include Towards field",
+    //         checkTTS: "Include TTS field",
+    //         checkVI: "Include Visual Instruction field",
+    //     },
+    //     fr: {
+    //         enableScript: "Script activé",
+    //         HighSegShields: "Segments avec cartouche",
+    //         HighSegShieldsClr: "Segments avec cartouche",
+    //         ShowSegShields: "Afficher les cartouches sur la carte",
+    //         SegShieldMissing: "Segments dont le cartouche pourrait manquer",
+    //         SegShieldMissingClr: "Segments dont le cartouche pourrait manquer",
+    //         SegShieldError: "Segments ayant un cartouche mais ne devraient peut-être pas",
+    //         SegShieldErrorClr: "Segments ayant un cartouche mais ne devraient peut-être pas",
+    //         HighNodeShields: "Noeuds avec cartouche (TG)",
+    //         HighNodeShieldsClr: "Noeuds avec cartouche (TG)",
+    //         ShowNodeShields: "Afficher les infos des cartouches de noeuds",
+    //         ShowExitShields: "As des panneaux de sortie",
+    //         ShowTurnTTS: "Has TIO",
+    //         AlertTurnTTS: "Alert if TTS is different from default",
+    //         NodeShieldMissing: "Noeud dont le cartouche pourrait manquer",
+    //         NodeShieldMissingClr: "Noeud dont le cartouche pourrait manquer",
+    //         resetSettings: "Réinitialiser les paramètres",
+    //         disabledFeat: "Feature not configured for this country",
+    //         ShowTowards: 'As "En direction de"',
+    //         ShowVisualInst: "As des instructions visuelles",
+    //         SegHasDir: "Cartouche de segment avec direction",
+    //         SegHasDirClr: "Cartouche de segment avec direction",
+    //         SegInvDir: "Cartouche de segment sans direction",
+    //         SegInvDirClr: "Cartouche de segment sans direction",
+    //         IconHead: "Icônes de carte",
+    //         HighlightHead: "Surlignages",
+    //         HighlightColors: "Couleurs de surlignage",
+    //         ShowRamps: "Inclure les bretelles",
+    //         mHPlus: "Only show on minor highways or greater",
+    //         Experimental: "Experimental Features",
+    //         AlternativeShields: "Alternative Name Shields",
+    //         AlternativePrimaryCity: "Alternative Street with Primary City",
+    //         AlternativeNoCity: "Alternative Street with No City",
+    //         titleCase: "Segments/nodes with direction not in large-and-small-caps format",
+    //         TitleCaseClr: "Segments/nodes with direction not in large-and-small-caps format",
+    //         TitleCaseSftClr: "Direction in free text might not be in large-and-small-caps format",
+    //         checkTWD: 'Inclure le champ "en direction de"',
+    //         checkTTS: "Inclure le champ TTS",
+    //         checkVI: "Inclure le champ d'instruction visuel",
+    //     },
+    // };
     const CheckAltName = new Set([
         // France
         73,
@@ -597,7 +603,7 @@ function rsaInit() {
         ShowVisualInst: false,
         NodeShieldMissing: false,
         HighSegClr: "#0066ff",
-        MissSegClr: "#00ff00",
+        SegShieldMissingClr: "#00ff00",
         ErrSegClr: "#cc00ff",
         HighNodeClr: "#ff00bf",
         MissNodeClr: "#ff0000",
@@ -784,173 +790,178 @@ function rsaInit() {
             ".group-title.toolbar-top-level-item-title.rsa:hover {cursor:pointer;}",
         ].join(" ");
         const $rsaTab = $("<div>");
-        $rsaTab.html = [
+        const rsaTabHtml = [
             `<div class='rsa-wrapper' id='rsa-tab-wrapper'>
-        <div style='margin-bottom:5px;border-bottom:1px solid black;'>
-            <span style='font-weight:bold;'>
-                <a href='https://www.waze.com/forum/viewtopic.php?f=1851&t=315748' target='_blank' style='text-decoration:none;'>Road Shield Assistant</a>
-            </span> - v${GM_info.script.version}
-        </div>
-        <div class='rsa-option-container'>
-            <input type=checkbox class='rsa-checkbox' id='rsa-enableScript' />
-            <label class='rsa-label' for='rsa-enableScript'><span id='rsa-text-enableScript'></span></label>
-        </div>
-        <div class='rsa-option-container'>
-            <input type=checkbox class='rsa-checkbox' id='rsa-ShowRamps' />
-            <label class='rsa-label' for='rsa-ShowRamps'><span id='rsa-text-ShowRamps'></span></label>
-        </div>
-        <div class='rsa-option-container'>
-            <input type=checkbox class='rsa-checkbox' id='rsa-mHPlus' />
-            <label class='rsa-label' for='rsa-mHPlus'><span id='rsa-text-mHPlus'></span></label>
-        </div>
+            <div style='margin-bottom:5px;border-bottom:1px solid black;'>
+                <span style='font-weight:bold;'>
+                    <a href='https://www.waze.com/forum/viewtopic.php?f=1851&t=315748' target='_blank' style='text-decoration:none;'>Road Shield Assistant</a>
+                </span> - v${GM_info.script.version}
+            </div>
+            <div class='rsa-option-container'>
+                <input type=checkbox class='rsa-checkbox' id='rsa-enableScript' />
+                <label class='rsa-label' for='rsa-enableScript'><span id='rsa-text-enableScript'></span></label>
+            </div>
+            <div class='rsa-option-container'>
+                <input type=checkbox class='rsa-checkbox' id='rsa-ShowRamps' />
+                <label class='rsa-label' for='rsa-ShowRamps'><span id='rsa-text-ShowRamps'></span></label>
+            </div>
+            <div class='rsa-option-container'>
+                <input type=checkbox class='rsa-checkbox' id='rsa-mHPlus' />
+                <label class='rsa-label' for='rsa-mHPlus'><span id='rsa-text-mHPlus'></span></label>
+            </div>
 
-        <span id='rsa-text-IconHead' class='rsa-header'></span>
-        <div style='border-top:2px solid black;'>
-            <div class='rsa-option-container'>
-                <input type=checkbox class='rsa-checkbox' id='rsa-ShowSegShields' />
-                <label class='rsa-label' for='rsa-ShowSegShields'><span id='rsa-text-ShowSegShields'></span></label>
+            <span id='rsa-text-IconHead' class='rsa-header'></span>
+            <div style='border-top:2px solid black;'>
+                <div class='rsa-option-container'>
+                    <input type=checkbox class='rsa-checkbox' id='rsa-ShowSegShields' />
+                    <label class='rsa-label' for='rsa-ShowSegShields'><span id='rsa-text-ShowSegShields'></span></label>
+                </div>
+                <div class='rsa-option-container no-display'>
+                    <input type=checkbox class='rsa-checkbox' id='rsa-NodeShieldMissing' />
+                    <label class='rsa-label' for='rsa-NodeShieldMissing'><span id='rsa-text-NodeShieldMissing'></span></label>
+                </div>
+                <div class='rsa-option-container'>
+                    <input type=checkbox class='rsa-checkbox' id='rsa-ShowNodeShields' />
+                    <label class='rsa-label' for='rsa-ShowNodeShields'><span id='rsa-text-ShowNodeShields'></span></label>
+                </div>
+                <div class='rsa-option-container sub'>
+                    <input type=checkbox class='rsa-checkbox' id='rsa-ShowExitShields' />
+                    <label class='rsa-label' for='rsa-ShowExitShields'><span id='rsa-text-ShowExitShields'></span></label>
+                </div>
+                <div class='rsa-option-container sub'>
+                    <input type=checkbox class='rsa-checkbox' id='rsa-ShowTurnTTS' />
+                    <label class='rsa-label' for='rsa-ShowTurnTTS'><span id='rsa-text-ShowTurnTTS'></span></label>
+                </div>
+                <div class='rsa-option-container sub'>
+                    <input type=checkbox class='rsa-checkbox' id='rsa-ShowTowards' />
+                    <label class='rsa-label' for='rsa-ShowTowards'><span id='rsa-text-ShowTowards'></span></label>
+                </div>
+                <div class='rsa-option-container sub'>
+                    <input type=checkbox class='rsa-checkbox' id='rsa-ShowVisualInst' />
+                    <label class='rsa-label' for='rsa-ShowVisualInst'><span id='rsa-text-ShowVisualInst'></span></label>
+                </div>
+                <div class='rsa-option-container sub' style='display:none;'>
+                    <input type=checkbox class='rsa-checkbox' id='rsa-AlertTurnTTS' />
+                    <label class='rsa-label' for='rsa-AlertTurnTTS'><span id='rsa-text-AlertTurnTTS'></span></label>
+                </div>
             </div>
-            <div class='rsa-option-container no-display'>
-                <input type=checkbox class='rsa-checkbox' id='rsa-NodeShieldMissing' />
-                <label class='rsa-label' for='rsa-NodeShieldMissing'><span id='rsa-text-NodeShieldMissing'></span></label>
-            </div>
-            <div class='rsa-option-container'>
-                <input type=checkbox class='rsa-checkbox' id='rsa-ShowNodeShields' />
-                <label class='rsa-label' for='rsa-ShowNodeShields'><span id='rsa-text-ShowNodeShields'></span></label>
-            </div>
-            <div class='rsa-option-container sub'>
-                <input type=checkbox class='rsa-checkbox' id='rsa-ShowExitShields' />
-                <label class='rsa-label' for='rsa-ShowExitShields'><span id='rsa-text-ShowExitShields'></span></label>
-            </div>
-            <div class='rsa-option-container sub'>
-                <input type=checkbox class='rsa-checkbox' id='rsa-ShowTurnTTS' />
-                <label class='rsa-label' for='rsa-ShowTurnTTS'><span id='rsa-text-ShowTurnTTS'></span></label>
-            </div>
-            <div class='rsa-option-container sub'>
-                <input type=checkbox class='rsa-checkbox' id='rsa-ShowTowards' />
-                <label class='rsa-label' for='rsa-ShowTowards'><span id='rsa-text-ShowTowards'></span></label>
-            </div>
-            <div class='rsa-option-container sub'>
-                <input type=checkbox class='rsa-checkbox' id='rsa-ShowVisualInst' />
-                <label class='rsa-label' for='rsa-ShowVisualInst'><span id='rsa-text-ShowVisualInst'></span></label>
-            </div>
-            <div class='rsa-option-container sub' style='display:none;'>
-                <input type=checkbox class='rsa-checkbox' id='rsa-AlertTurnTTS' />
-                <label class='rsa-label' for='rsa-AlertTurnTTS'><span id='rsa-text-AlertTurnTTS'></span></label>
-            </div>
-        </div>
 
-        <span id='rsa-text-HighlightHead' class='rsa-header'></span>
-        <div style='border-top:2px solid black;'>
-            <div class='rsa-option-container' style='display:none;'>
-                <input type=checkbox class='rsa-checkbox' id='rsa-HighNodeShields' />
-                <label class='rsa-label' for='rsa-HighNodeShields'><span id='rsa-text-HighNodeShields'></span></label>
+            <span id='rsa-text-HighlightHead' class='rsa-header'></span>
+            <div style='border-top:2px solid black;'>
+                <div class='rsa-option-container' style='display:none;'>
+                    <input type=checkbox class='rsa-checkbox' id='rsa-HighNodeShields' />
+                    <label class='rsa-label' for='rsa-HighNodeShields'><span id='rsa-text-HighNodeShields'></span></label>
+                </div>
+                <div class='rsa-option-container'>
+                    <input type=checkbox class='rsa-checkbox' id='rsa-HighSegShields' />
+                    <label class='rsa-label' for='rsa-HighSegShields'><span id='rsa-text-HighSegShields'></span></label>
+                </div>
+                <div class='rsa-option-container'>
+                    <input type=checkbox class='rsa-checkbox' id='rsa-SegHasDir' />
+                    <label class='rsa-label' for='rsa-SegHasDir'><span id='rsa-text-SegHasDir'></span></label>
+                </div>
+                <div class='rsa-option-container'>
+                    <input type=checkbox class='rsa-checkbox' id='rsa-SegInvDir' />
+                    <label class='rsa-label' for='rsa-SegInvDir'><span id='rsa-text-SegInvDir'></span></label>
+                </div>
+                <div class='rsa-option-container' id='rsa-container-titleCase'>
+                    <input type=checkbox class='rsa-checkbox' id='rsa-titleCase' />
+                    <label class='rsa-label' for='rsa-titleCase'><span id='rsa-text-titleCase'></span></label>
+                </div>
+                <div class='rsa-option-container sub' id='rsa-container-checkTWD'>
+                    <input type=checkbox class='rsa-checkbox' id='rsa-checkTWD' />
+                    <label class='rsa-label' for='rsa-checkTWD'><span id='rsa-text-checkTWD'></span></label>
+                </div>
+                <div class='rsa-option-container sub' id='rsa-container-checkTTS'>
+                    <input type=checkbox class='rsa-checkbox' id='rsa-checkTTS' />
+                    <label class='rsa-label' for='rsa-checkTTS'><span id='rsa-text-checkTTS'></span></label>
+                </div>
+                <div class='rsa-option-container sub' id='rsa-container-checkVI'>
+                    <input type=checkbox class='rsa-checkbox' id='rsa-checkVI' />
+                    <label class='rsa-label' for='rsa-checkVI'><span id='rsa-text-checkVI'></span></label>
+                </div>
+                <div class='rsa-option-container'>
+                    <input type=checkbox class='rsa-checkbox' id='rsa-SegShieldMissing' />
+                    <label class='rsa-label' for='rsa-SegShieldMissing'><span id='rsa-text-SegShieldMissing'></span></label>
+                </div>
+                <div class='rsa-option-container'>
+                    <input type=checkbox class='rsa-checkbox' id='rsa-SegShieldError' />
+                    <label class='rsa-label' for='rsa-SegShieldError'><span id='rsa-text-SegShieldError'></span></label>
+                </div>
             </div>
-            <div class='rsa-option-container'>
-                <input type=checkbox class='rsa-checkbox' id='rsa-HighSegShields' />
-                <label class='rsa-label' for='rsa-HighSegShields'><span id='rsa-text-HighSegShields'></span></label>
+            <span id='rsa-text-HighlightColors' class='rsa-header'></span>
+            <div style='border-top:2px solid black;'>
+                <div class='rsa-option-container'>
+                    <input type=color class='rsa-color-input' id='rsa-HighSegClr' />
+                    <label class='rsa-label' for='rsa-HighSegClr'><span id='rsa-text-HighSegShieldsClr'></span></label>
+                </div>
+                <div class='rsa-option-container'>
+                    <input type=color class='rsa-color-input' id='rsa-SegHasDirClr' />
+                    <label class='rsa-label' for='rsa-SegHasDirClr'><span id='rsa-text-SegHasDirClr'></span></label>
+                </div>
+                <div class='rsa-option-container'>
+                    <input type=color class='rsa-color-input' id='rsa-SegInvDirClr' />
+                    <label class='rsa-label' for='rsa-SegInvDirClr'><span id='rsa-text-SegInvDirClr'></span></label>
+                </div>
+                <div class='rsa-option-container'>
+                    <input type=color class='rsa-color-input' id='rsa-SegShieldMissingClr' />
+                    <label class='rsa-label' for='rsa-SegShieldMissingClr'><span id='rsa-text-SegShieldMissingClr'></span></label>
+                </div>
+                <div class='rsa-option-container'>
+                    <input type=color class='rsa-color-input' id='rsa-ErrSegClr' />
+                    <label class='rsa-label' for='rsa-ErrSegClr'><span id='rsa-text-SegShieldErrorClr'></span></label>
+                </div>
+                <div class='rsa-option-container'>
+                    <input type=color class='rsa-color-input' id='rsa-HighNodeClr' />
+                    <label class='rsa-label' for='rsa-HighNodeClr'><span id='rsa-text-HighNodeShieldsClr'></span></label>
+                </div>
+                <div class='rsa-option-container no-display'>
+                    <input type=color class='rsa-color-input' id='rsa-MissNodeClr' />
+                    <label class='rsa-label' for='rsa-MissNodeClr'><span id='rsa-text-NodeShieldMissingClr'></span></label>
+                </div>
+                <div class='rsa-option-container' id='rsa-container-TitleCaseClr'>
+                    <input type=color class='rsa-color-input' id='rsa-TitleCaseClr' />
+                    <label class='rsa-label' for='rsa-TitleCaseClr'><span id='rsa-text-TitleCaseClr'></span></label>
+                </div>
+                <div class='rsa-option-container' id='rsa-container-TitleCaseSftClr'>
+                    <input type=color class='rsa-color-input' id='rsa-TitleCaseSftClr' />
+                    <label class='rsa-label' for='rsa-TitleCaseSftClr'><span id='rsa-text-TitleCaseSftClr'></span></label>
+                </div>
             </div>
-            <div class='rsa-option-container'>
-                <input type=checkbox class='rsa-checkbox' id='rsa-SegHasDir' />
-                <label class='rsa-label' for='rsa-SegHasDir'><span id='rsa-text-SegHasDir'></span></label>
+            <span id='rsa-text-Experimental' class='rsa-header'></span>
+            <div style='border-top:2px solid black;'>
+                <div class='rsa-option-container'>
+                    <input type=checkbox class='rsa-checkbox' id='rsa-AlternativeShields' />
+                    <label class='rsa-label' for='rsa-AlternativeShields'><span id='rsa-text-AlternativeShields'></span></label>
+                </div>
+                <div class='rsa-option-container sub'>
+                    <input type=radio class='rsa-checkbox' value='AlternativePrimaryCity' name='AlternativeShields' id='rsa-AlternativePrimaryCity' checked/>
+                    <label class='rsa-label' for='rsa-AlternativePrimaryCity'><span id='rsa-text-AlternativePrimaryCity'></span></label>
+                </div>
+                <div class='rsa-option-container sub'>
+                    <input type=radio class='rsa-checkbox' value='AlternativeNoCity' name='AlternativeShields' id='rsa-AlternativeNoCity' />
+                    <label class='rsa-label' for='rsa-AlternativeNoCity'><span id='rsa-text-AlternativeNoCity'></span></label>
+                </div>
             </div>
-            <div class='rsa-option-container'>
-                <input type=checkbox class='rsa-checkbox' id='rsa-SegInvDir' />
-                <label class='rsa-label' for='rsa-SegInvDir'><span id='rsa-text-SegInvDir'></span></label>
-            </div>
-            <div class='rsa-option-container' id='rsa-container-titleCase'>
-                <input type=checkbox class='rsa-checkbox' id='rsa-titleCase' />
-                <label class='rsa-label' for='rsa-titleCase'><span id='rsa-text-titleCase'></span></label>
-            </div>
-            <div class='rsa-option-container sub' id='rsa-container-checkTWD'>
-                <input type=checkbox class='rsa-checkbox' id='rsa-checkTWD' />
-                <label class='rsa-label' for='rsa-checkTWD'><span id='rsa-text-checkTWD'></span></label>
-            </div>
-            <div class='rsa-option-container sub' id='rsa-container-checkTTS'>
-                <input type=checkbox class='rsa-checkbox' id='rsa-checkTTS' />
-                <label class='rsa-label' for='rsa-checkTTS'><span id='rsa-text-checkTTS'></span></label>
-            </div>
-            <div class='rsa-option-container sub' id='rsa-container-checkVI'>
-                <input type=checkbox class='rsa-checkbox' id='rsa-checkVI' />
-                <label class='rsa-label' for='rsa-checkVI'><span id='rsa-text-checkVI'></span></label>
-            </div>
-            <div class='rsa-option-container'>
-                <input type=checkbox class='rsa-checkbox' id='rsa-SegShieldMissing' />
-                <label class='rsa-label' for='rsa-SegShieldMissing'><span id='rsa-text-SegShieldMissing'></span></label>
-            </div>
-            <div class='rsa-option-container'>
-                <input type=checkbox class='rsa-checkbox' id='rsa-SegShieldError' />
-                <label class='rsa-label' for='rsa-SegShieldError'><span id='rsa-text-SegShieldError'></span></label>
-            </div>
-        </div>
-        <span id='rsa-text-HighlightColors' class='rsa-header'></span>
-        <div style='border-top:2px solid black;'>
-            <div class='rsa-option-container'>
-                <input type=color class='rsa-color-input' id='rsa-HighSegClr' />
-                <label class='rsa-label' for='rsa-HighSegClr'><span id='rsa-text-HighSegShieldsClr'></span></label>
-            </div>
-            <div class='rsa-option-container'>
-                <input type=color class='rsa-color-input' id='rsa-SegHasDirClr' />
-                <label class='rsa-label' for='rsa-SegHasDirClr'><span id='rsa-text-SegHasDirClr'></span></label>
-            </div>
-            <div class='rsa-option-container'>
-                <input type=color class='rsa-color-input' id='rsa-SegInvDirClr' />
-                <label class='rsa-label' for='rsa-SegInvDirClr'><span id='rsa-text-SegInvDirClr'></span></label>
-            </div>
-            <div class='rsa-option-container'>
-                <input type=color class='rsa-color-input' id='rsa-MissSegClr' />
-                <label class='rsa-label' for='rsa-MissSegClr'><span id='rsa-text-SegShieldMissingClr'></span></label>
-            </div>
-            <div class='rsa-option-container'>
-                <input type=color class='rsa-color-input' id='rsa-ErrSegClr' />
-                <label class='rsa-label' for='rsa-ErrSegClr'><span id='rsa-text-SegShieldErrorClr'></span></label>
-            </div>
-            <div class='rsa-option-container'>
-                <input type=color class='rsa-color-input' id='rsa-HighNodeClr' />
-                <label class='rsa-label' for='rsa-HighNodeClr'><span id='rsa-text-HighNodeShieldsClr'></span></label>
-            </div>
-            <div class='rsa-option-container no-display'>
-                <input type=color class='rsa-color-input' id='rsa-MissNodeClr' />
-                <label class='rsa-label' for='rsa-MissNodeClr'><span id='rsa-text-NodeShieldMissingClr'></span></label>
-            </div>
-            <div class='rsa-option-container' id='rsa-container-TitleCaseClr'>
-                <input type=color class='rsa-color-input' id='rsa-TitleCaseClr' />
-                <label class='rsa-label' for='rsa-TitleCaseClr'><span id='rsa-text-TitleCaseClr'></span></label>
-            </div>
-            <div class='rsa-option-container' id='rsa-container-TitleCaseSftClr'>
-                <input type=color class='rsa-color-input' id='rsa-TitleCaseSftClr' />
-                <label class='rsa-label' for='rsa-TitleCaseSftClr'><span id='rsa-text-TitleCaseSftClr'></span></label>
-            </div>
-        </div>
-        <span id='rsa-text-Experimental' class='rsa-header'></span>
-        <div style='border-top:2px solid black;'>
-            <div class='rsa-option-container'>
-                <input type=checkbox class='rsa-checkbox' id='rsa-AlternativeShields' />
-                <label class='rsa-label' for='rsa-AlternativeShields'><span id='rsa-text-AlternativeShields'></span></label>
-            </div>
-            <div class='rsa-option-container sub'>
-                <input type=radio class='rsa-checkbox' value='AlternativePrimaryCity' name='AlternativeShields' id='rsa-AlternativePrimaryCity' checked/>
-                <label class='rsa-label' for='rsa-AlternativePrimaryCity'><span id='rsa-text-AlternativePrimaryCity'></span></label>
-            </div>
-            <div class='rsa-option-container sub'>
-                <input type=radio class='rsa-checkbox' value='AlternativeNoCity' name='AlternativeShields' id='rsa-AlternativeNoCity' />
-                <label class='rsa-label' for='rsa-AlternativeNoCity'><span id='rsa-text-AlternativeNoCity'></span></label>
-            </div>
-        </div>
 
-        <div style='border-top:2px solid black;'>
-            <div class='rsa-option-container'>
-                <input type=button id='rsa-resetSettings' />
+            <div style='border-top:2px solid black;'>
+                <div class='rsa-option-container'>
+                    <input type=button id='rsa-resetSettings' />
+                </div>
             </div>
-        </div>
-    </div>`,
+        </div>`,
         ].join(" ");
-        const $rsaFixWrapper = $('<div id="rsa-autoWrapper" class="toolbar-button ItemInactive" style="display:none;margin-right:5px;">');
-        const $rsaFixInner = $('<div class="group-title toolbar-top-level-item-title rsa" style="margin:5px 0 0 15px;font-size:12px;">RSA Fix</div>');
+        // const $rsaFixWrapper = $(
+        //     '<div id="rsa-autoWrapper" class="toolbar-button ItemInactive" style="display:none;margin-right:5px;">'
+        // );
+        // const $rsaFixInner = $(
+        //     '<div class="group-title toolbar-top-level-item-title rsa" style="margin:5px 0 0 15px;font-size:12px;">RSA Fix</div>'
+        // );
         // WazeWrap.Interface.Tab('RSA', $rsaTab.html, setupOptions, 'RSA');
         sdk.Sidebar.registerScriptTab().then((r) => {
             r.tabLabel.innerHTML = "RSA";
-            r.tabPane.innerHTML = $rsaTab.html;
+            r.tabPane.innerHTML = rsaTabHtml;
+            loadTranslations();
             setupOptions();
         });
         $(`<style type="text/css">${rsaCss}</style>`).appendTo("head");
@@ -1023,6 +1034,52 @@ function rsaInit() {
         tryScan();
         checkOptions();
     }
+    async function loadTranslations() {
+        // Load road abbreviation data
+        $.ajaxSetup({ async: false });
+        await $.getJSON(`https://sheets.googleapis.com/v4/spreadsheets/${mainRoadSheetID}?includeGridData=true&key=${apiKey}`)
+            .done((spreadSheet) => {
+            for (const sheet of spreadSheet.sheets) {
+                if (sheet.properties.title !== "TRANSLATIONS")
+                    continue;
+                if (sheet.data[0].rowData.length <= 1)
+                    continue;
+                let tempTranslationKeys = [];
+                for (let ridx = 0; ridx < sheet.data[0].rowData.length; ridx++) {
+                    const row = sheet.data[0].rowData[ridx];
+                    if (row.values && row.values.length >= 2) {
+                        if (ridx === 0) {
+                            tempTranslationKeys = row.values.map(value => value.formattedValue);
+                            continue;
+                        }
+                        translationKeys = tempTranslationKeys.slice(2);
+                        let locality = "";
+                        let translate = false;
+                        for (let cidx = 0; cidx < row.values.length; cidx++) {
+                            if (tempTranslationKeys[cidx] === "locality") {
+                                locality = row.values[cidx].formattedValue;
+                                Localizations[locality] = {};
+                                translate = false;
+                                continue;
+                            }
+                            if (tempTranslationKeys[cidx] === "translate") {
+                                translate = row.values[cidx].formattedValue === "1";
+                                continue;
+                            }
+                            if (translate) {
+                                Localizations[locality][tempTranslationKeys[cidx]] = row.values[cidx].formattedValue;
+                            }
+                            else
+                                continue;
+                        }
+                    }
+                }
+            }
+        }).fail(() => {
+            console.error("RSA: Unable to Load Translations");
+        });
+        $.ajaxSetup({ async: true });
+    }
     async function setupOptions() {
         await loadSettings();
         // Create OL layer for display
@@ -1088,7 +1145,7 @@ function rsaInit() {
             setChecked("rsa-checkVI", rsaSettings.checkVI);
             setChecked("rsa-AlternativeShields", rsaSettings.AlternativeShields);
             setValue("rsa-HighSegClr", rsaSettings.HighSegClr);
-            setValue("rsa-MissSegClr", rsaSettings.MissSegClr);
+            setValue("rsa-SegShieldMissingClr", rsaSettings.SegShieldMissingClr);
             setValue("rsa-ErrSegClr", rsaSettings.ErrSegClr);
             setValue("rsa-HighNodeClr", rsaSettings.HighNodeClr);
             setValue("rsa-MissNodeClr", rsaSettings.MissNodeClr);
@@ -1099,7 +1156,7 @@ function rsaInit() {
             $("#rsa-AlternativeShields").on("change", (e) => {
                 processAlternativeSettings();
             });
-            if (rsaSettings.titleCase && sdk.DataModel.Countries.getTopCountry()?.id === 235) {
+            if (rsaSettings.titleCase && sdk.DataModel.Countries.getTopCountry()?.id === CountryID.UNITED_STATES) {
                 $("#rsa-container-checkTWD").css("display", "block");
                 $("#rsa-container-checkTTS").css("display", "block");
                 $("#rsa-container-checkVI").css("display", "block");
@@ -1201,7 +1258,7 @@ function rsaInit() {
                 ShowVisualInst: false,
                 NodeShieldMissing: false,
                 HighSegClr: "#0066ff",
-                MissSegClr: "#00ff00",
+                SegShieldMissingClr: "#00ff00",
                 ErrSegClr: "#cc00ff",
                 HighNodeClr: "#ff00bf",
                 MissNodeClr: "#ff0000",
@@ -1224,18 +1281,16 @@ function rsaInit() {
             setEleStatus();
         });
         // Add translated UI text
-        if (!Strings[LANG])
+        if (!Localizations[LANG])
             LANG = "en";
-        const messageKeys = Object.keys(Strings[LANG]);
+        const messageKeys = Object.keys(Localizations[LANG]);
         for (let i = 0; i < messageKeys.length; i++) {
             const key = messageKeys[i];
-            $(`#rsa-text-${key}`).text(Strings[LANG][key]);
+            $(`#rsa-text-${key}`).text(Localizations[LANG][key]);
         }
-        $("#rsa-resetSettings").attr("value", Strings[LANG].resetSettings);
+        $("#rsa-resetSettings").attr("value", Localizations[LANG].resetSettings);
         checkOptions();
     }
-    const apiKey = "AIzaSyDJaCD-PqytSPVrXZMLqI2UNIsTuy_yLRY";
-    const mainRoadSheetID = "10RiokHwpEdcDu5AotXVBbesAzixDSCm9y5x44TRsToI";
     async function loadCountryAbbr(countryId, sheetKey) {
         if (!mainSheetLoaded)
             return;
@@ -1319,7 +1374,7 @@ function rsaInit() {
             ShowVisualInst: false,
             NodeShieldMissing: false,
             HighSegClr: "#0066ff",
-            MissSegClr: "#00ff00",
+            SegShieldMissingClr: "#00ff00",
             ErrSegClr: "#cc00ff",
             HighNodeClr: "#ff00bf",
             MissNodeClr: "#ff0000",
@@ -1347,7 +1402,7 @@ function rsaInit() {
         loadMainRoadAbbr();
     }
     async function saveSettings() {
-        const { enableScript, HighSegShields, ShowSegShields, SegShieldMissing, SegShieldError, HighNodeShields, ShowNodeShields, ShowExitShields, SegHasDir, SegInvDir, ShowTurnTTS, AlertTurnTTS, ShowTowards, ShowVisualInst, NodeShieldMissing, HighSegClr, MissSegClr, ErrSegClr, HighNodeClr, MissNodeClr, SegHasDirClr, SegInvDirClr, TitleCaseClr, TitleCaseSftClr, ShowRamps, AlternativeShields, mHPlus, titleCase, checkTWD, checkTTS, checkVI, mapLayerVisible, iconLayerVisible, } = rsaSettings;
+        const { enableScript, HighSegShields, ShowSegShields, SegShieldMissing, SegShieldError, HighNodeShields, ShowNodeShields, ShowExitShields, SegHasDir, SegInvDir, ShowTurnTTS, AlertTurnTTS, ShowTowards, ShowVisualInst, NodeShieldMissing, HighSegClr, SegShieldMissingClr, ErrSegClr, HighNodeClr, MissNodeClr, SegHasDirClr, SegInvDirClr, TitleCaseClr, TitleCaseSftClr, ShowRamps, AlternativeShields, mHPlus, titleCase, checkTWD, checkTTS, checkVI, mapLayerVisible, iconLayerVisible, } = rsaSettings;
         const localSettings = {
             lastSaveAction: Date.now(),
             enableScript,
@@ -1366,7 +1421,7 @@ function rsaInit() {
             ShowVisualInst,
             NodeShieldMissing,
             HighSegClr,
-            MissSegClr,
+            SegShieldMissingClr,
             ErrSegClr,
             HighNodeClr,
             MissNodeClr,
@@ -1449,9 +1504,9 @@ function rsaInit() {
             textSegShieldMissing.prop("checked", false);
             textSegShieldError.prop("checked", false);
             textNodeShieldMissing.prop("checked", false);
-            textSegShieldMissing.text(`${Strings[LANG].SegShieldMissing} ${Strings[LANG].disabledFeat}`);
-            textSegShieldError.text(`${Strings[LANG].SegShieldError} ${Strings[LANG].disabledFeat}`);
-            textNodeShieldMissing.text(`${Strings[LANG].NodeShieldMissing} ${Strings[LANG].disabledFeat}`);
+            textSegShieldMissing.text(`${Localizations[LANG].SegShieldMissing} ${Localizations[LANG].disabledFeat}`);
+            textSegShieldError.text(`${Localizations[LANG].SegShieldError} ${Localizations[LANG].disabledFeat}`);
+            textNodeShieldMissing.text(`${Localizations[LANG].NodeShieldMissing} ${Localizations[LANG].disabledFeat}`);
             segShieldMissing.prop("disabled", true);
             segShieldError.prop("disabled", true);
             nodeShieldMissing.prop("disabled", true);
@@ -1464,9 +1519,9 @@ function rsaInit() {
             textSegShieldMissing.prop("checked", rsaSettings.SegShieldMissing);
             textSegShieldError.prop("checked", rsaSettings.SegShieldError);
             textNodeShieldMissing.prop("checked", rsaSettings.NodeShieldMissing);
-            textSegShieldMissing.text(Strings[LANG].SegShieldMissing);
-            textSegShieldError.text(Strings[LANG].SegShieldError);
-            textNodeShieldMissing.text(Strings[LANG].NodeShieldMissing);
+            textSegShieldMissing.text(Localizations[LANG].SegShieldMissing);
+            textSegShieldError.text(Localizations[LANG].SegShieldError);
+            textNodeShieldMissing.text(Localizations[LANG].NodeShieldMissing);
             segShieldMissing.prop("disabled", false);
             segShieldError.prop("disabled", false);
             nodeShieldMissing.prop("disabled", false);
@@ -1657,7 +1712,7 @@ function rsaInit() {
         }
         // If candidate and missing shield
         if (rsaSettings.SegShieldMissing && candidate.isCandidate && address.street !== null && address.street.signType === null)
-            createHighlight(seg, rsaSettings.MissSegClr);
+            createHighlight(seg, rsaSettings.SegShieldMissingClr);
         // Streets without capitalized letters
         if (rsaSettings.titleCase) {
             const badName = matchTitleCase(address.street);
@@ -1686,6 +1741,7 @@ function rsaInit() {
             guidance.shield = guidance.shield || turn.hasShieldsPopulated;
             guidance.towards = guidance.towards || turn.hasTowardsGuidance;
             guidance.visual = guidance.visual || turn.hasVisualInstruction;
+            guidance.exit = guidance.exit || ((turn.hasTurnGuidance && turn.turnGuidance?.exitSigns && turn.turnGuidance.exitSigns.length > 0) ?? false);
             if (rsaSettings.titleCase) {
                 const badName = matchTitleCaseThroughNode(turn);
                 if (badName.isBad) {
