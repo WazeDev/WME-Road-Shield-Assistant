@@ -1,7 +1,7 @@
     // ==UserScript==
     // @name         WME Road Shield Assistant
     // @namespace    https://greasyfork.org/en/users/286957-skidooguy
-    // @version      2026.08.31.001
+    // @version      2026.10.11.001
     // @description  Adds shield information display to WME
     // @author       SkiDooGuy, jm6087, Karlsosha
     // @match        https://www.waze.com/editor*
@@ -1174,7 +1174,6 @@
                                 for (let cidx = 0; cidx < row.values.length; cidx++) {
                                     if(tempTranslationKeys[cidx] === "locality") {
                                         locality = row.values[cidx].formattedValue;
-                                        Localizations[locality] = {};
                                         translate = false;
                                         continue;
                                     }
@@ -1183,6 +1182,8 @@
                                         continue;
                                     }
                                     if(translate) {
+                                        if(!Localizations[locality]) Localizations[locality] = {};
+
                                         Localizations[locality][tempTranslationKeys[cidx]] = row.values[cidx].formattedValue;
                                     }
                                     else continue;
