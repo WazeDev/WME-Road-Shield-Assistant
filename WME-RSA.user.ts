@@ -1,7 +1,7 @@
     // ==UserScript==
     // @name         WME Road Shield Assistant
     // @namespace    https://greasyfork.org/en/users/286957-skidooguy
-    // @version      2026.10.11.001
+    // @version      2026.11.22.001
     // @description  Adds shield information display to WME
     // @author       SkiDooGuy, jm6087, Karlsosha
     // @match        https://www.waze.com/editor*
@@ -24,13 +24,13 @@
     /* global turf */
     /* global $ */
 
-    // import type { Node, Segment, SegmentAddress, Street, Turn, WmeSDK } from "wme-sdk-typings";
+    // import type { Node, Segment, SegmentAddress, Street, Turn, AsyncWmeSDK } from "wme-sdk-typings";
     // import type { Point, LineString, Position, Feature } from "geojson";
     // import * as turf from "@turf/turf";
     // import _ from "underscore";
     // import WazeWrap from "https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js";
 
-    let sdk: WmeSDK;
+    let sdk: AsyncWmeSDK | null = null;
     unsafeWindow.SDK_INITIALIZED.then(() => {
         if (!unsafeWindow.getWmeSdk) {
             throw new Error("SDK is not installed");
@@ -52,8 +52,7 @@
         const GF_LINK = "https://greasyfork.org/en/scripts/425050-wme-road-shield-assisstant";
         const FORUM_LINK = "https://www.waze.com/discuss/t/script-road-shield-assistant-rsa/227100";
         const RSA_UPDATE_NOTES = `<b>NEW:</b><br>
-        - Move Translation From Code to Spreadsheet.<br>
-        - Add Back Display of Exit Signs<br>
+        - Support Async SDK<br>
     <b>BUGFIXES:</b><br>
     <b>KNOWN ISSUES:</b><br><br>`;
 
@@ -712,65 +711,68 @@
         const rsaIconLayer = { layerName: "RSA Icon Layer", zIndexing: false };
         let LANG: string;
         let alternativeType: string;
+        interface StyleContext {
+
+        };
         const styleConfig = {
             styleContext: {
-                highNodeColor: (context) => {
+                highNodeColor: (context: StyleContext) => {
                     return context?.feature?.properties?.style?.strokeColor;
                 },
-                labelExternalGraphic: (context) => {
+                labelExternalGraphic: (context: StyleContext) => {
                     const style = context?.feature?.properties?.style;
                     if (!style || !style?.sign || !style?.txt) return "";
                     return `https://renderer-am.waze.com/renderer/v1/signs/${style.sign}?text=${style.txt}`;
                 },
-                labelGraphicHeight: (context) => {
+                labelGraphicHeight: (context: StyleContext) => {
                     return context?.feature?.properties?.style?.height;
                 },
-                labelGraphicWidth: (context) => {
+                labelGraphicWidth: (context: StyleContext) => {
                     return context?.feature?.properties?.style?.width;
                 },
-                shieldExternalGraphic: (context) => {
+                shieldExternalGraphic: (context: StyleContext) => {
                     return context?.feature?.properties?.style?.externalGraphic;
                 },
-                shieldGraphicWidth: (context) => {
+                shieldGraphicWidth: (context: StyleContext) => {
                     return context?.feature?.properties?.style?.graphicWidth;
                 },
-                shieldGraphicHeight: (context) => {
+                shieldGraphicHeight: (context: StyleContext ) => {
                     return context?.feature?.properties?.style?.graphicHeight;
                 },
-                shieldLabel: (context) => {
+                shieldLabel: (context: StyleContext) => {
                     return context?.feature?.properties?.style?.label;
                 },
-                nodeStyleStrokeColor: (context) => {
+                nodeStyleStrokeColor: (context: StyleContext) => {
                     return context?.feature?.properties?.style?.strokeColor;
                 },
-                nodeStyleStrokeOpacity: (context) => {
+                nodeStyleStrokeOpacity: (context: StyleContext) => {
                     return context?.feature?.properties?.style?.strokeOpacity;
                 },
-                nodeStyleStrokeWidth: (context) => {
+                nodeStyleStrokeWidth: (context: StyleContext) => {
                     return context?.feature?.properties?.style?.strokeWidth;
                 },
-                nodeStyleFillOpacity: (context) => {
+                nodeStyleFillOpacity: (context: StyleContext) => {
                     return context?.feature?.properties?.style?.fillOpacity;
                 },
-                nodeStylePointRadius: (context) => {
+                nodeStylePointRadius: (context: StyleContext) => {
                     return context?.feature?.properties?.style?.pointRadius;
                 },
-                segHighlightStrokeOpacity: (context) => {
+                segHighlightStrokeOpacity: (context: StyleContext) => {
                     return context?.feature?.properties?.style?.strokeOpacity;
                 },
-                segHighlightStrokeColor: (context) => {
+                segHighlightStrokeColor: (context: StyleContext) => {
                     return context?.feature?.properties?.style?.strokeColor;
                 },
-                segHighlightStrokeWidth: (context) => {
+                segHighlightStrokeWidth: (context: StyleContext) => {
                     return context?.feature?.properties?.style?.strokeWidth;
                 },
-                segHighlightFillColor: (context) => {
+                segHighlightFillColor: (context: StyleContext) => {
                     return context?.feature?.properties?.style?.fillColor;
                 },
-                segHighlightFillOpacity: (context) => {
+                segHighlightFillOpacity: (context: StyleContext) => {
                     return context?.feature?.properties?.style?.fillOpacity;
                 },
-                shieldLabelYOffset: (context) => {
+                shieldLabelYOffset: (context: StyleContext) => {
                     return context?.feature?.properties?.style?.labelYOffset;
                 },
             },
@@ -1296,6 +1298,7 @@
             // WazeWrap.Events.register('selectionchanged', null, tryScan);
             sdk.Events.on({ eventName: "wme-map-move-end", eventHandler: updateMap });
             sdk.Events.on({ eventName: "wme-map-zoom-changed", eventHandler: updateMap });
+            sdk.Events.on({ eventName: "wme-map-data-loaded", eventHandler: updateMap });
 
             sdk.Shortcuts.createShortcut({
                 callback: addShieldClick,
@@ -1805,9 +1808,6 @@
                 rsaSettings.HighSegShields ||
                 rsaSettings.titleCase
             ) {
-                // _.each(W.model.segments.getObjectArray(), s => {
-                //     scanSeg(s);
-                // }
                 for (const s of sdk.DataModel.Segments.getAll()) {
                     processSeg(s);
                 }
@@ -1829,16 +1829,6 @@
             )
                 return;
 
-            // let segAtt = seg.attributes;
-            // let streetID = segAtt.primaryStreetID;
-            // const streetID: number | null = seg.primaryStreetId;
-            // if (streetID === null) return;
-            // // let oldStreet = W.model.streets.getObjectById(streetID).attributes;
-            // let street: Street | null = sdk.DataModel.Streets.getById({ streetId: streetID });
-            // if (street === null || street.cityId === null) return;
-            // const city: City | null = sdk.DataModel.Cities.getById({ cityId: street.cityId });
-            // if (city === null) return;
-            // const stateID = city.stateId;
             let address = sdk.DataModel.Segments.getAddress({ segmentId: seg.id });
 
             if (rsaSettings.AlternativeShields) {

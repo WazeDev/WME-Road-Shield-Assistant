@@ -2,7 +2,7 @@
 // ==UserScript==
 // @name         WME Road Shield Assistant
 // @namespace    https://greasyfork.org/en/users/286957-skidooguy
-// @version      2026.10.11.001
+// @version      2026.11.22.001
 // @description  Adds shield information display to WME
 // @author       SkiDooGuy, jm6087, Karlsosha
 // @match        https://www.waze.com/editor*
@@ -23,12 +23,12 @@
 /* global WazeWrap */
 /* global turf */
 /* global $ */
-// import type { Node, Segment, SegmentAddress, Street, Turn, WmeSDK } from "wme-sdk-typings";
+// import type { Node, Segment, SegmentAddress, Street, Turn, AsyncWmeSDK } from "wme-sdk-typings";
 // import type { Point, LineString, Position, Feature } from "geojson";
 // import * as turf from "@turf/turf";
 // import _ from "underscore";
 // import WazeWrap from "https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js";
-let sdk;
+let sdk = null;
 unsafeWindow.SDK_INITIALIZED.then(() => {
     if (!unsafeWindow.getWmeSdk) {
         throw new Error("SDK is not installed");
@@ -47,8 +47,7 @@ function rsaInit() {
     const GF_LINK = "https://greasyfork.org/en/scripts/425050-wme-road-shield-assisstant";
     const FORUM_LINK = "https://www.waze.com/discuss/t/script-road-shield-assistant-rsa/227100";
     const RSA_UPDATE_NOTES = `<b>NEW:</b><br>
-        - Move Translation From Code to Spreadsheet.<br>
-        - Add Back Display of Exit Signs<br>
+        - Support Async SDK<br>
     <b>BUGFIXES:</b><br>
     <b>KNOWN ISSUES:</b><br><br>`;
     const apiKey = "AIzaSyDJaCD-PqytSPVrXZMLqI2UNIsTuy_yLRY";
@@ -627,6 +626,7 @@ function rsaInit() {
     const rsaIconLayer = { layerName: "RSA Icon Layer", zIndexing: false };
     let LANG;
     let alternativeType;
+    ;
     const styleConfig = {
         styleContext: {
             highNodeColor: (context) => {
@@ -1175,6 +1175,7 @@ function rsaInit() {
         // WazeWrap.Events.register('selectionchanged', null, tryScan);
         sdk.Events.on({ eventName: "wme-map-move-end", eventHandler: updateMap });
         sdk.Events.on({ eventName: "wme-map-zoom-changed", eventHandler: updateMap });
+        sdk.Events.on({ eventName: "wme-map-data-loaded", eventHandler: updateMap });
         sdk.Shortcuts.createShortcut({
             callback: addShieldClick,
             description: "Activates the Add Shield Button",
@@ -1626,9 +1627,6 @@ function rsaInit() {
             rsaSettings.SegShieldError ||
             rsaSettings.HighSegShields ||
             rsaSettings.titleCase) {
-            // _.each(W.model.segments.getObjectArray(), s => {
-            //     scanSeg(s);
-            // }
             for (const s of sdk.DataModel.Segments.getAll()) {
                 processSeg(s);
             }
@@ -1646,16 +1644,6 @@ function rsaInit() {
         if ((!rsaSettings.ShowRamps && seg.roadType === 4) ||
             (rsaSettings.mHPlus && !majorRoads.has(seg.roadType)))
             return;
-        // let segAtt = seg.attributes;
-        // let streetID = segAtt.primaryStreetID;
-        // const streetID: number | null = seg.primaryStreetId;
-        // if (streetID === null) return;
-        // // let oldStreet = W.model.streets.getObjectById(streetID).attributes;
-        // let street: Street | null = sdk.DataModel.Streets.getById({ streetId: streetID });
-        // if (street === null || street.cityId === null) return;
-        // const city: City | null = sdk.DataModel.Cities.getById({ cityId: street.cityId });
-        // if (city === null) return;
-        // const stateID = city.stateId;
         let address = sdk.DataModel.Segments.getAddress({ segmentId: seg.id });
         if (rsaSettings.AlternativeShields) {
             for (const altAddress of address.altStreets) {
