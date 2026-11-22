@@ -17,7 +17,8 @@
 		"rules": {
 			"preset": "recommended",
 			"suspicious": {
-				"noTemplateCurlyInString": "off"
+				"noTemplateCurlyInString": "off",
+				"noDuplicateEnumValues": "off"
 			}
 		}
 	},
